@@ -1,0 +1,15 @@
+# secretos
+.env
+
+# backend
+backend/target/
+
+# frontend (para cuando exista)
+frontend/node_modules/
+frontend/.next/
+
+# IDEs y sistema
+.idea/
+.vscode/
+*.iml
+.DS_Storebuild/

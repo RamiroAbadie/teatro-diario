@@ -1,0 +1,29 @@
+# ============================================================
+# Caddyfile (va en /caddy/Caddyfile)
+# ============================================================
+# Caddy es el único que da la cara a internet. Su trabajo:
+#   1. HTTPS automático (pide y renueva certificados solo)
+#   2. Enrutar: /api/* -> Spring, todo lo demás -> Next
+#
+# ANTES DE TENER DOMINIO: usá "localhost" como primera línea
+# para probar el modo producción local (certificado self-signed).
+# CON DOMINIO: reemplazá por tudominio.com y listo — no hay paso 2,
+# el HTTPS real aparece solo la primera vez que levante en el VPS.
+# ============================================================
+
+localhost {
+	# la API va al backend (nombre del servicio en la red de Compose)
+	handle /api/* {
+		reverse_proxy backend:8080
+	}
+
+	# el health check para UptimeRobot pasa también al backend
+	handle /actuator/health {
+		reverse_proxy backend:8080
+	}
+
+	# todo lo demás es el frontend
+	handle {
+		reverse_proxy frontend:3000
+	}
+}

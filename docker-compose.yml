@@ -1,0 +1,84 @@
+# ============================================================
+# docker-compose.yml (va en la RAÍZ del monorepo)
+# ============================================================
+# Declara el sistema completo: 4 servicios en una red interna donde
+# se ven entre sí POR NOMBRE (postgres, backend, frontend, caddy).
+#
+# DOS MODOS DE USO:
+#   Desarrollo diario:  docker compose up -d postgres
+#       (solo la base; Spring corre en tu IDE, Next con npm run dev,
+#        ambos se conectan a localhost:5432 porque el puerto está
+#        publicado hacia tu máquina)
+#   Modo producción / VPS:  docker compose up -d --build
+#       (todo el sistema)
+#
+# Las variables ${...} salen del archivo .env (NUNCA versionado, D48).
+# ============================================================
+
+services:
+
+  postgres:
+    image: postgres:17-alpine          # imagen oficial; alpine = liviana
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      # SIN esto, los datos mueren con el contenedor. Con esto,
+      # viven en el volumen "pgdata" administrado por Docker.
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      # publica el puerto hacia TU máquina para el modo desarrollo.
+      # Formato host:contenedor.
+      - "5432:5432"
+    healthcheck:
+      # le enseña a Docker a distinguir "proceso arrancó" de
+      # "la base ya acepta conexiones". Otros servicios esperan esto.
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend                   # usa /backend/Dockerfile
+    environment:
+      # Spring lee esto y pisa lo que diga application.yml.
+      # OJO: el host es "postgres" (nombre del servicio), NO localhost.
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${DB_NAME}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
+      SPRING_PROFILES_ACTIVE: prod
+    volumes:
+      # los afiches subidos persisten fuera del contenedor (D45)
+      - uploads:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy     # espera el healthcheck, no solo el proceso
+    # SIN "ports": nadie de afuera habla directo con Spring.
+    # Solo Caddy lo alcanza, por la red interna. Menos superficie expuesta.
+
+  frontend:
+    build: ./frontend
+    environment:
+      # Next (en el servidor) llama al backend por la red interna:
+      BACKEND_INTERNAL_URL: http://backend:8080
+    depends_on:
+      - backend
+    # tampoco expone puertos: se entra por Caddy.
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"                        # HTTP (redirige a HTTPS)
+      - "443:443"                      # HTTPS
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro   # la config, solo-lectura
+      - caddy_data:/data               # acá guarda los certificados TLS
+    depends_on:
+      - backend
+      - frontend
+
+volumes:
+  pgdata:      # datos de Postgres
+  uploads:     # afiches
+  caddy_data:  # certificados HTTPS (si se pierde, se re-emiten solos)

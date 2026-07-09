@@ -1,0 +1,5 @@
+# /backend/.dockerignore — qué NO copiar al build (renombrar a .dockerignore)
+# Sin esto, "COPY . ." arrastra basura y rompe el caché a cada rato.
+target/
+.git/
+*.md
