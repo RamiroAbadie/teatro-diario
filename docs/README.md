@@ -12,6 +12,8 @@ módulos → arquitectura → datos → stack → open source → plan de ejecuc
 2. `product/PRODUCT_PRINCIPLES.md` — las reglas con las que se decide (P1-P9).
 3. `product/CORE_LOOP.md` — la acción central y el sistema de comportamiento.
 4. `product/MVP_SCOPE.md` — el alcance congelado y qué prueba.
+5. `product/USER_STORIES.md` — las 22 historias con criterios de aceptación.
+6. `product/USER_FLOWS.md` — pantallas, flujos, estados vacíos y de error.
 
 **Para entender el dominio:**
 5. `domain/DOMAIN_MODEL.md` — entidades y relaciones conceptuales.

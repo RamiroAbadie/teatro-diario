@@ -57,6 +57,7 @@
 | D47 | **Monorepo**: `/backend`, `/frontend`, `/docs`, compose en raíz | Un solo lugar para issues; features full-stack viajan en un PR; docs junto al código |
 | D48 | Secretos: variables de entorno; `.env` local ignorado + `.env.example` versionado; `.gitignore` desde el commit cero. Ninguna credencial en el repo jamás | Cierra P12 |
 | D49 | Roadmap en 5 fases (esqueleto que camina → catálogo → diario → social → beta), ~4-6 meses. El deploy es Fase 0, no la última: la deuda operativa se paga primero. Beta cerrada con espectadores reales como pago parcial de P1 | Ver `docs/roadmap/` — cierre de Etapa 10 |
+| D50 | 22 historias de usuario con criterios de aceptación (`docs/product/USER_STORIES.md`) + mapa de flujos y pantallas (`docs/product/USER_FLOWS.md`) como fuente de los issues de Fases 1-3. Regla: historia que no mapea a una decisión del log = cambio de alcance (D27) | Cuatro micro-decisiones por defecto (MD-1 a MD-4) atacables en USER_STORIES.md |
 
 ## Supuestos (hipótesis, no requisitos)
 
@@ -82,6 +83,7 @@
 |----|-----------|------------------------|
 | P1 | Entrevistas con 5-10 espectadores intensivos de CABA | Recomendado antes de congelar el MVP; pospuesto por decisión del fundador |
 | P2 | Nombre del producto | Libre |
+| P15 | MD-5: ¿cambio de contraseña en el MVP o post-MVP? (única "configuración" candidata; sin email transaccional, el "olvidé mi contraseña" es otro problema encadenado) | Antes de Fase 1 |
 | ~~P3~~ | **Resuelto**: ~50 producciones impecables (D38). Lista concreta de títulos: tarea pre-lanzamiento | Cerrado en Etapa 7 |
 | ~~P4~~ | **Resuelto en diferido**: escalera de fuentes en DATA_STRATEGY.md; el scraper es el peldaño 2, con revisión legal en su momento (D39) | Cerrado en Etapa 7 |
 | ~~P5~~ | **Resuelto**: listas fuera del MVP (D25) | Cerrado en Etapa 4 |
