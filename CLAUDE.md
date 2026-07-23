@@ -14,9 +14,10 @@ Web app. Un solo desarrollador. Toda la documentación fundacional vive en `docs
 ## Stack (no proponer alternativas: ya está decidido y justificado en docs/architecture/STACK.md)
 
 - Backend: Java 21 + Spring Boot, en `/backend`
-- Frontend: Next.js (React, SSR), en `/frontend`
-- Base de datos: PostgreSQL (búsqueda con pg_trgm, sin motor externo)
-- Deploy: Docker Compose (spring + next + postgres + caddy), un VPS
+- Base de datos: PostgreSQL (corre local con `docker compose up -d postgres`)
+- Frontend: NO EXISTE TODAVÍA (D55) — no crear nada en /frontend ni proponer frameworks
+- Esquema de DB: por ahora `ddl-auto: update` (D53). NO introducir Flyway hasta la fase
+  de deploy. NO agregar Spring Security hasta que se implemente el login (D52)
 
 ## Reglas innegociables de arquitectura
 
@@ -56,6 +57,10 @@ Web app. Un solo desarrollador. Toda la documentación fundacional vive en `docs
 - Si una tarea parece requerir algo fuera del alcance congelado o contra una decisión
   del log: **frenar y avisar**, no implementar.
 - Secretos SOLO por variables de entorno; jamás en el código ni en el repo (D48).
+- MODO ESENCIAL (D51): no proponer herramientas, dependencias ni infraestructura nuevas.
+  Las capas dentro de cada módulo son las clásicas: entidad / repository (solo interface,
+  Spring Data genera la impl) / service / controller / DTOs como records, bajo
+  `<modulo>/internal/`. Lo público del módulo va en la raíz del paquete del módulo.
 
 ## Definición de "hecho"
 
