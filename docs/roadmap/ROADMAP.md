@@ -1,84 +1,64 @@
 # Roadmap
 
-> Estado: v1.0 — cierre de Etapa 10 y del proceso fundacional.
-> Escrito contra la restricción real: **~5-6 hs/semana de desarrollo** (D37).
-> Estimación total hasta lanzamiento: **4-6 meses**. Si los tiempos incomodan, se negocia
-> alcance (el Decision Log tiene la lista de recortes), nunca los límites internos.
+> Estado: v2.0 — reescrito tras el ajuste de ritmo D51-D55 (la v1.0 cargaba toda la
+> deuda de aprendizaje en la Fase 0 y eso materializó el riesgo R3).
+> Restricción real: ~5-6 hs/semana de desarrollo. Regla de la v2: **cada fase termina
+> con algo que funciona y toca producto lo antes posible.** Las herramientas entran
+> cuando aparece su problema (misma filosofía que ADR-002), no por adelantado.
 
-## Principio rector del plan: el esqueleto camina primero
+## Lo que ya está hecho (no volver a tocar)
 
-El deploy NO es la última fase. La deuda de aprendizaje más riesgosa del proyecto es
-operativa (Docker, VPS, primera vez en producción — STACK.md), y las deudas riesgosas se
-pagan primero, cuando equivocarse es barato. Por eso el primer incremento es un
-"walking skeleton": la tubería completa funcionando de punta a punta con contenido trivial.
+Repo con licencia y docs · esqueleto Spring con Modulith en el pom · Postgres corriendo
+con un comando (`docker compose up -d postgres`) · CI que compila en cada push · CLAUDE.md.
 
-## Fase 0 — Fundaciones y esqueleto que camina (semanas 1-3)
+## Fase 1 — El catálogo, a puro código conocido (AHORA)
 
-**Objetivo:** `docker compose up` local levanta todo; el mismo sistema corre en el VPS
-con HTTPS; CI verde. Cero funcionalidad de producto.
+**Objetivo:** el backend del catálogo completo, escrito con las capas de siempre
+(entidad / repository / service / controller / DTOs record) adentro de los módulos.
 
-- Monorepo (D47): `/backend`, `/frontend`, `/docs` (esta documentación entra al repo), 
-  `docker-compose.yml`. Licencia AGPL-3.0 (D46). `.gitignore` + `.env.example` desde el
-  commit cero (D48).
-- Esqueleto Spring Boot con la estructura de paquetes por módulo (identidad, catalogo,
-  diario, social + capa de aplicación) — los límites de ADR-001 existen desde el día uno.
-- Esqueleto Next.js con una página SSR trivial que consume un endpoint trivial de Spring.
-- Compose: Spring + Next + Postgres + Caddy.
-- VPS contratado, Compose desplegado, HTTPS funcionando, UptimeRobot mirando.
-- GitHub Actions: build + tests de ambas apps en cada PR.
+1. Las 5 carpetas de módulos + package-info (2 minutos, a mano).
+2. `ModulithArchitectureTest` (3 líneas, copy-paste, cuando sea en la semana).
+3. **CRUD de Salas** (HU-19) — el más simple, para entrar en calor. Con `ddl-auto: update`:
+   las tablas se crean solas, cero migraciones.
+4. CRUD de Personas.
+5. CRUD de Producciones con participaciones y estados (HU-20, sin afiche todavía).
+6. Endpoints públicos de lectura: ficha, en cartel, página de artista (HU-04/05/06, versión JSON).
 
-**Criterio de salida:** una URL pública con HTTPS que muestra datos que salieron de
-Postgres pasando por Spring y renderizados por Next en el servidor.
+**Criterio de salida:** desde un cliente HTTP (curl/Postman) podés crear y consultar
+el catálogo completo. **Herramientas nuevas usadas: cero.**
 
-## Fase 1 — Catálogo e identidad (semanas 4-9)
+## Fase 2 — Identidad y Diario (el corazón)
 
-**Objetivo:** el admin puede construir el catálogo; existe la ficha pública.
+- Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).
+- El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats (HU-12/13/14).
+- Búsqueda pg_trgm (HU-07).
 
-- Identidad mínima: registro, login (sesiones, D44), perfil básico.
-- Módulo Catálogo: producciones, personas, participaciones, salas, estados.
-- Panel de admin (CRUD completo, calidad de herramienta interna).
-- Ficha pública de producción y página de artista con SSR + metadatos Open Graph (ADR-003
-  rinde acá): compartir una ficha por WhatsApp ya muestra preview.
-- Vista "en cartel".
-- **En paralelo (horas de curaduría):** carga de salas y primeras fichas reales — el
-  catálogo se construye durante el desarrollo, no después.
+## Fase 3 — Social
 
-## Fase 2 — Diario, el corazón (semanas 10-15)
+- Follow, feed compuesto, likes, sugerencias, reportes (HU-15..18, 21, 22).
 
-**Objetivo:** el gesto central completo. Al final de esta fase, el producto ya es un diario.
+## Fase 4 — Frontend
 
-- El registro en un gesto (D18): buscar producción + fecha opcional/aproximada + rating +
-  reseña. Editar/borrar. Re-visto (D19).
-- Promedio por producción con la lógica D20 (⚠️ no AVG plano).
-- Perfil/diario del usuario: historial + stats mínimas (D26).
-- Búsqueda `pg_trgm` sobre producciones y personas (D42).
+- Recién acá se abre la discusión de front (D55). Plan vigente: Next.js (ADR-003);
+  se revisa al llegar si el fundador lo pide, como decisión explícita.
+- Las pantallas de USER_FLOWS.md contra la API ya construida y probada.
 
-## Fase 3 — Social y válvulas (semanas 16-19)
+## Fase 5 — Deploy y beta
 
-- Follow/unfollow; feed como composición (D29) con fallback global (D22); likes.
-- Búsqueda de usuarios.
-- Sugerencias de producciones → cola de aprobación en panel admin (D24).
-- Reportar reseña → cola en panel admin (D40).
+- **Entra Flyway** (D53): baseline del esquema + `ddl-auto: validate`. Innegociable
+  antes de datos reales.
+- Descongelar Dockerfiles + Caddy + Compose completo (ya escritos, están en el repo).
+  VPS, HTTPS, backups probados (D45).
+- Subida de afiches (lo único de HU-20 que quedó pendiente), panel admin pulido.
+- Carga de las ~50 fichas (D38) + beta cerrada con espectadores reales (métricas de
+  MVP_SCOPE.md).
 
-## Fase 4 — Endurecimiento y beta (semanas 20-24)
+## Deudas congeladas con condición de reentrada (resumen)
 
-- Backups nocturnos a R2 **con restauración probada** (D45).
-- Catálogo a las ~50 fichas impecables (D38).
-- **Beta cerrada con el puñado de amigos/conocidos espectadores** — acá se paga
-  parcialmente la deuda de validación P1: son las primeras personas reales usando el
-  loop completo. Observar contra las métricas de MVP_SCOPE.md (¿registran 3+ obras?
-  ¿vuelven?).
-- Correcciones de la beta → lanzamiento abierto.
-
-## Después del lanzamiento (v1.1+, sin fechas)
-
-En orden tentativo por valor/costo: listas (D25) → compartir registro como imagen para
-stories (X3) → scraper de precarga interno (D39, con su revisión legal) → comentarios
-(X5) → "tu año en teatro" (diciembre). Cada una entra por decisión explícita en el log.
-
-## Reglas del plan
-
-1. Las fases no se solapan en desarrollo: una feature de Fase 3 no empieza con Fase 2 abierta.
-2. La curaduría corre en paralelo desde la Fase 1 con sus propias horas (D37).
-3. Al cerrar cada fase: revisar el Decision Log — ¿alguna decisión quedó desactualizada
-   por la realidad? Se actualiza el log, no la memoria.
+| Qué | Vuelve cuando |
+|---|---|
+| Spring Security | HU-01 (Fase 2) |
+| Flyway | Antes del primer deploy con datos (Fase 5) — innegociable |
+| Tests + Testcontainers | Progresivamente desde Fase 2; sí o sí antes de la beta |
+| Dockerfiles/Caddy/VPS | Fase 5 |
+| Frontend | Fase 4 |

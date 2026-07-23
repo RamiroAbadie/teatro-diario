@@ -12,4 +12,5 @@ frontend/.next/
 .idea/
 .vscode/
 *.iml
-.DS_Storebuild/
+.DS_Store
+build/
