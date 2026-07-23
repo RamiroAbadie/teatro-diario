@@ -7,9 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaResponse;
 import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaService;
+import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaResponse;
+import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaService;
 
 /**
- * Casos de uso de lectura pública del catálogo (HU-04/05/06). Separado de
+ * Casos de uso de lectura pública del catálogo (HU-04/05/06, más la página de sala que
+ * USER_FLOWS.md deja adentro de HU-04 y no tiene historia propia). Separado de
  * {@code ProduccionService} a propósito: son las mismas entidades pero la otra cara — sin
  * login (D21) y de solo lectura, mientras que la de escritura queda solo-admin (D7).
  *
@@ -26,11 +29,14 @@ class CatalogoPublicoService {
 
 	private final PersonaService personas;
 
+	private final SalaService salas;
+
 	CatalogoPublicoService(ProduccionRepository producciones, ParticipacionRepository participaciones,
-			PersonaService personas) {
+			PersonaService personas, SalaService salas) {
 		this.producciones = producciones;
 		this.participaciones = participaciones;
 		this.personas = personas;
+		this.salas = salas;
 	}
 
 	/**
@@ -61,6 +67,18 @@ class CatalogoPublicoService {
 	public ArtistaResponse artista(Long personaId) {
 		PersonaResponse persona = personas.obtener(personaId);
 		return ArtistaResponse.desde(persona, participaciones.findByPersonaIdOrderByRolAscProduccionTituloAsc(personaId));
+	}
+
+	/**
+	 * Página de sala: el destino del "sala con link" de la ficha (HU-04). Una sala sin nada
+	 * en cartel devuelve la lista vacía: la sala existe igual, y la ficha vieja que la
+	 * enlaza tiene que llegar a algún lado.
+	 */
+	@Transactional(readOnly = true)
+	public SalaPublicaResponse sala(Long salaId) {
+		SalaResponse sala = salas.obtener(salaId);
+		return SalaPublicaResponse.desde(sala,
+				producciones.findBySalaIdAndEstadoOrderByTituloAsc(salaId, EstadoProduccion.EN_CARTEL));
 	}
 
 	private List<ProduccionResumenResponse> resumir(List<Produccion> producciones, EstadoProduccion estado) {

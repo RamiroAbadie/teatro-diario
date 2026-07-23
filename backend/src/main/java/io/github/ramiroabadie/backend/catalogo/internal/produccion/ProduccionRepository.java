@@ -33,4 +33,8 @@ interface ProduccionRepository extends JpaRepository<Produccion, Long> {
 	 */
 	@EntityGraph(attributePaths = "sala")
 	List<Produccion> findByEstadoInOrderByTituloAsc(Collection<EstadoProduccion> estados);
+
+	/** Sostiene la página de sala: qué se puede ver ahí ahora (pantalla 5, parte de HU-04). */
+	@EntityGraph(attributePaths = "sala")
+	List<Produccion> findBySalaIdAndEstadoOrderByTituloAsc(Long salaId, EstadoProduccion estado);
 }

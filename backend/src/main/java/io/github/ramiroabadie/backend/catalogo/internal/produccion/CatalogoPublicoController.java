@@ -10,14 +10,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaNoEncontradaException;
+import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaNoEncontradaException;
 
 /**
- * Lectura pública del catálogo: ficha, en cartel y página de artista (HU-04/05/06). Sin
- * prefijo {@code /api/admin}: acá no hay login (D21), y esa frontera es la que se va a
- * asegurar en la Fase 2 (D52) dejando este lado abierto.
+ * Lectura pública del catálogo: ficha, en cartel, página de artista y página de sala
+ * (HU-04/05/06). Sin prefijo {@code /api/admin}: acá no hay login (D21), y esa frontera es
+ * la que se va a asegurar en la Fase 2 (D52) dejando este lado abierto — de ahí que la sala
+ * necesite su lectura propia acá y no le alcance con la del panel.
  *
- * <p>Un solo controller para los tres endpoints porque son una sola capacidad —la cara de
- * lectura del catálogo— y las tres respuestas se arman con datos de producción.</p>
+ * <p>Un solo controller para los cuatro endpoints porque son una sola capacidad —la cara de
+ * lectura del catálogo— y las cuatro respuestas se arman con datos de producción.</p>
  *
  * <p>Versión JSON. El SSR y los metadatos Open Graph que piden HU-04 y HU-05 (ADR-003) son
  * del frontend, que entra en la Fase 4: estos endpoints son lo que va a consumir.</p>
@@ -48,7 +50,17 @@ class CatalogoPublicoController {
 		return servicio.artista(id);
 	}
 
-	@ExceptionHandler({ ProduccionNoEncontradaException.class, PersonaNoEncontradaException.class })
+	/**
+	 * Por id y no por slug como anota USER_FLOWS.md: el slug es de la URL del frontend
+	 * (Fase 4) y la Sala no tiene ese campo. La API va por id, igual que ficha y artista.
+	 */
+	@GetMapping("/salas/{id}")
+	public SalaPublicaResponse sala(@PathVariable Long id) {
+		return servicio.sala(id);
+	}
+
+	@ExceptionHandler({ ProduccionNoEncontradaException.class, PersonaNoEncontradaException.class,
+			SalaNoEncontradaException.class })
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	public ProblemDetail noEncontrada(RuntimeException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
