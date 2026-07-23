@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
  */
 @Entity
 @Table(name = "sala")
-class Sala {
+public class Sala {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -41,15 +41,15 @@ class Sala {
 		this.complejo = complejo;
 	}
 
-	Long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	String getNombre() {
+	public String getNombre() {
 		return nombre;
 	}
 
-	String getComplejo() {
+	public String getComplejo() {
 		return complejo;
 	}
 }

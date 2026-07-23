@@ -9,9 +9,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Casos de uso del CRUD de personas. El mapeo entidad↔DTO ocurre dentro de la transacción
  * ({@code open-in-view: false}). La autorización de admin (D7) es un concern transversal
  * de la capa de aplicación y llega con Spring Security en la Fase 2 (D52).
+ *
+ * <p>Es {@code public} solo para que Producción pueda resolver participaciones dentro del
+ * mismo módulo: el paquete sigue siendo {@code internal} y {@code ModulithArchitectureTest}
+ * impide que otro módulo lo use.</p>
  */
 @Service
-class PersonaService {
+public class PersonaService {
 
 	private final PersonaRepository repositorio;
 
@@ -48,6 +52,22 @@ class PersonaService {
 			throw new PersonaNoEncontradaException(id);
 		}
 		repositorio.deleteById(id);
+	}
+
+	/**
+	 * Buscar-o-crear persona para las participaciones de una producción (D14, HU-20): con
+	 * {@code id} resuelve una persona ya existente; con {@code nombre} reusa la que coincida
+	 * (sin distinguir mayúsculas) o la da de alta en el momento. Los duplicados que se
+	 * cuelen son deuda de datos aceptada, que el admin corrige a mano (D14).
+	 * Requiere transacción abierta del llamador.
+	 */
+	public Persona buscarOCrearEntidad(Long id, String nombre) {
+		if (id != null) {
+			return buscar(id);
+		}
+		String limpio = nombre.trim();
+		return repositorio.findFirstByNombreIgnoreCaseOrderByIdAsc(limpio)
+				.orElseGet(() -> repositorio.save(new Persona(limpio)));
 	}
 
 	private Persona buscar(Long id) {

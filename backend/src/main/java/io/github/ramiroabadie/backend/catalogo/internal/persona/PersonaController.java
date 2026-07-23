@@ -5,6 +5,7 @@ import java.util.List;
 
 import jakarta.validation.Valid;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -65,5 +66,12 @@ class PersonaController {
 	@ResponseStatus(HttpStatus.NOT_FOUND)
 	public ProblemDetail noEncontrada(PersonaNoEncontradaException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+
+	@ExceptionHandler(DataIntegrityViolationException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	public ProblemDetail enUso(DataIntegrityViolationException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT,
+				"La persona tiene participaciones cargadas: sacalas antes de borrarla");
 	}
 }
