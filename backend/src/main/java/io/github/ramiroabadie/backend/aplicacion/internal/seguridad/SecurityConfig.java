@@ -25,6 +25,7 @@ import org.springframework.security.web.csrf.CsrfAuthenticationStrategy;
 import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
+import org.springframework.security.web.savedrequest.NullRequestCache;
 
 /**
  * La autorización es un concern transversal de la capa de aplicación, no de los módulos
@@ -107,15 +108,29 @@ class SecurityConfig {
 						// Todo el contenido es público y se lee sin cuenta (D21).
 						.requestMatchers(HttpMethod.GET, "/api/**").permitAll()
 						.requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+						// Un 404 o un 400 se sirven con un segundo despacho del contenedor hacia
+						// /error, que también pasa por acá: si /error pide login, todo error real
+						// termina disfrazado de 401. El cuerpo que arma Boot no lleva mensaje ni
+						// stacktrace, así que abrirlo no filtra nada.
+						.requestMatchers("/error").permitAll()
 						.anyRequest().authenticated())
 				.csrf(csrf -> csrf
 						.csrfTokenRepository(csrfTokenRepository)
 						.csrfTokenRequestHandler(csrfTokenRequestHandler))
 				.securityContext(contexto -> contexto.securityContextRepository(securityContextRepository))
+				// Sin caché de peticiones: guardarla crea una sesión en cada 401 anónimo, y esta
+				// API nunca va a redirigir a nadie de vuelta a lo que quiso hacer antes de entrar.
+				.requestCache(cache -> cache.requestCache(new NullRequestCache()))
 				.logout(salida -> salida
 						.logoutUrl("/api/auth/logout")
-						.logoutSuccessHandler((peticion, respuesta, autenticacion) ->
-								respuesta.setStatus(HttpStatus.NO_CONTENT.value())))
+						.deleteCookies("JSESSIONID")
+						.logoutSuccessHandler((peticion, respuesta, autenticacion) -> {
+							// El handler de CSRF borra el token al salir; sin uno nuevo, el próximo
+							// login se comería un 403 por no tener qué mandar.
+							csrfTokenRepository.saveToken(csrfTokenRepository.generateToken(peticion),
+									peticion, respuesta);
+							respuesta.setStatus(HttpStatus.NO_CONTENT.value());
+						}))
 				// Una API responde 401, no redirige a un formulario que no existe.
 				.exceptionHandling(errores -> errores
 						.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
