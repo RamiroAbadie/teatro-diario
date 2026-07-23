@@ -9,9 +9,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Casos de uso del CRUD de salas. El mapeo entidad↔DTO ocurre dentro de la transacción
  * ({@code open-in-view: false}). La autorización de admin (D7) es un concern transversal
  * de la capa de aplicación y llega con Spring Security en la Fase 2 (D52).
+ *
+ * <p>Es {@code public} solo para que Producción pueda relacionarse con salas dentro del
+ * mismo módulo: el paquete sigue siendo {@code internal} y {@code ModulithArchitectureTest}
+ * impide que otro módulo lo use.</p>
  */
 @Service
-class SalaService {
+public class SalaService {
 
 	private final SalaRepository repositorio;
 
@@ -48,6 +52,14 @@ class SalaService {
 			throw new SalaNoEncontradaException(id);
 		}
 		repositorio.deleteById(id);
+	}
+
+	/**
+	 * Devuelve la entidad para que otra parte del módulo Catálogo (hoy Producción) la
+	 * referencie. Requiere transacción abierta del llamador.
+	 */
+	public Sala obtenerEntidad(Long id) {
+		return buscar(id);
 	}
 
 	private Sala buscar(Long id) {

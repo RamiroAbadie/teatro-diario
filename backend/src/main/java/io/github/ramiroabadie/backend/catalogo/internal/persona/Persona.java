@@ -15,7 +15,7 @@ import jakarta.persistence.Table;
  */
 @Entity
 @Table(name = "persona")
-class Persona {
+public class Persona {
 
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -36,11 +36,11 @@ class Persona {
 		this.nombre = nombre;
 	}
 
-	Long getId() {
+	public Long getId() {
 		return id;
 	}
 
-	String getNombre() {
+	public String getNombre() {
 		return nombre;
 	}
 }
