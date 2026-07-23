@@ -1,0 +1,56 @@
+package io.github.ramiroabadie.backend.catalogo.internal.produccion;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.bind.annotation.RestController;
+
+import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaNoEncontradaException;
+
+/**
+ * Lectura pública del catálogo: ficha, en cartel y página de artista (HU-04/05/06). Sin
+ * prefijo {@code /api/admin}: acá no hay login (D21), y esa frontera es la que se va a
+ * asegurar en la Fase 2 (D52) dejando este lado abierto.
+ *
+ * <p>Un solo controller para los tres endpoints porque son una sola capacidad —la cara de
+ * lectura del catálogo— y las tres respuestas se arman con datos de producción.</p>
+ *
+ * <p>Versión JSON. El SSR y los metadatos Open Graph que piden HU-04 y HU-05 (ADR-003) son
+ * del frontend, que entra en la Fase 4: estos endpoints son lo que va a consumir.</p>
+ */
+@RestController
+@RequestMapping("/api")
+class CatalogoPublicoController {
+
+	private final CatalogoPublicoService servicio;
+
+	CatalogoPublicoController(CatalogoPublicoService servicio) {
+		this.servicio = servicio;
+	}
+
+	@GetMapping("/producciones/{id}")
+	public ProduccionResponse ficha(@PathVariable Long id) {
+		return servicio.ficha(id);
+	}
+
+	/** Ruta propia y no {@code /producciones/en-cartel} para no chocar con la ficha por id. */
+	@GetMapping("/en-cartel")
+	public EnCartelResponse enCartel() {
+		return servicio.enCartel();
+	}
+
+	@GetMapping("/personas/{id}")
+	public ArtistaResponse artista(@PathVariable Long id) {
+		return servicio.artista(id);
+	}
+
+	@ExceptionHandler({ ProduccionNoEncontradaException.class, PersonaNoEncontradaException.class })
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ProblemDetail noEncontrada(RuntimeException ex) {
+		return ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, ex.getMessage());
+	}
+}

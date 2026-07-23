@@ -55,6 +55,10 @@ class Participacion {
 		return id;
 	}
 
+	Produccion getProduccion() {
+		return produccion;
+	}
+
 	Persona getPersona() {
 		return persona;
 	}
