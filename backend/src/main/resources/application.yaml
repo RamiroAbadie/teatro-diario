@@ -9,3 +9,12 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+
+# Sesión con cookie HTTP-only (D44). `secure: true` entra en la fase de deploy, cuando
+# haya HTTPS: acá haría que la cookie no viaje en http://localhost.
+server:
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
