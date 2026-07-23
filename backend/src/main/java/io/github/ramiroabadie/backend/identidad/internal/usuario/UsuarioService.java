@@ -1,5 +1,6 @@
 package io.github.ramiroabadie.backend.identidad.internal.usuario;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Locale;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,8 +23,19 @@ public class UsuarioService {
 		this.encoder = encoder;
 	}
 
+	/**
+	 * BCrypt trunca lo que pase de 72 bytes y desde Spring Security 6 directamente lo rechaza.
+	 * El {@code @Size} del request cuenta caracteres, que no es lo mismo: 40 letras con tilde ya
+	 * son 80 bytes. Sin este control, esa contraseña pasa la validación y revienta al hashear.
+	 */
+	private static final int MAXIMO_BYTES_PASSWORD = 72;
+
 	@Transactional
 	public CuentaResponse registrar(RegistroRequest req) {
+		if (req.password().getBytes(StandardCharsets.UTF_8).length > MAXIMO_BYTES_PASSWORD) {
+			throw new CampoInvalidoException("password",
+					"La contraseña es demasiado larga: los acentos y emojis ocupan más de un lugar");
+		}
 		String username = normalizar(req.username());
 		String email = normalizar(req.email());
 		if (repositorio.existsByUsername(username)) {

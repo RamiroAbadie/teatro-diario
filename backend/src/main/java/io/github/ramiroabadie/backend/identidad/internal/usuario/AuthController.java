@@ -32,8 +32,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * Alta de cuenta, login y "quién soy" (HU-01/02). El logout no está acá: lo resuelve el filtro
- * de Spring Security configurado en {@code SecurityConfig}, que además de invalidar la sesión
- * borra la cookie y rota el token CSRF.
+ * de Spring Security configurado en {@code SecurityConfig}, que invalida la sesión, borra las
+ * dos cookies y emite un token CSRF nuevo para que se pueda volver a entrar sin dar un rodeo.
  *
  * <p>La sesión se inicia a mano (no hay formLogin: esta API habla JSON) siguiendo el mismo orden
  * que el filtro estándar — autenticar, rotar el id de sesión, guardar el contexto — para no
@@ -109,7 +109,18 @@ class AuthController {
 	@ExceptionHandler(CampoEnUsoException.class)
 	@ResponseStatus(HttpStatus.CONFLICT)
 	public ProblemDetail campoEnUso(CampoEnUsoException ex) {
-		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+		return porCampo(HttpStatus.CONFLICT, ex);
+	}
+
+	/** Lo que la validación por anotaciones no alcanza a ver, pero sigue siendo un campo mal. */
+	@ExceptionHandler(CampoInvalidoException.class)
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public ProblemDetail campoInvalido(CampoInvalidoException ex) {
+		return porCampo(HttpStatus.BAD_REQUEST, ex);
+	}
+
+	private ProblemDetail porCampo(HttpStatus estado, CampoInvalidoException ex) {
+		ProblemDetail problema = ProblemDetail.forStatusAndDetail(estado, ex.getMessage());
 		problema.setProperty("errores", Map.of(ex.getCampo(), ex.getMessage()));
 		return problema;
 	}
