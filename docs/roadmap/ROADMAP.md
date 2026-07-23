@@ -11,7 +11,7 @@
 Repo con licencia y docs · esqueleto Spring con Modulith en el pom · Postgres corriendo
 con un comando (`docker compose up -d postgres`) · CI que compila en cada push · CLAUDE.md.
 
-## Fase 1 — El catálogo, a puro código conocido (AHORA)
+## Fase 1 — El catálogo, a puro código conocido (HECHA)
 
 **Objetivo:** el backend del catálogo completo, escrito con las capas de siempre
 (entidad / repository / service / controller / DTOs record) adentro de los módulos.
@@ -27,9 +27,10 @@ con un comando (`docker compose up -d postgres`) · CI que compila en cada push 
 **Criterio de salida:** desde un cliente HTTP (curl/Postman) podés crear y consultar
 el catálogo completo. **Herramientas nuevas usadas: cero.**
 
-## Fase 2 — Identidad y Diario (el corazón)
+## Fase 2 — Identidad y Diario (el corazón) (AHORA)
 
-- Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).
+- ~~Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).~~ Hecho
+  en D56/D57, con el candado de `/api/admin/**` y los primeros tests del proyecto.
 - El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats (HU-12/13/14).
 - Búsqueda pg_trgm (HU-07).
 
@@ -57,7 +58,7 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
 
 | Qué | Vuelve cuando |
 |---|---|
-| Spring Security | HU-01 (Fase 2) |
+| ~~Spring Security~~ | Reingresó con HU-01/02 (D56) |
 | Flyway | Antes del primer deploy con datos (Fase 5) — innegociable |
 | Tests + Testcontainers | Progresivamente desde Fase 2; sí o sí antes de la beta |
 | Dockerfiles/Caddy/VPS | Fase 5 |
