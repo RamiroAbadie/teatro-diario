@@ -1,1 +1,231 @@
 # teatro-diario
+
+**El diario personal del teatro de Buenos Aires.** Un lugar donde queda registrado,
+ordenado y valorado todo el teatro que viste, y donde podés ver qué vieron y qué opinan
+las personas que te importan.
+
+Algo así como lo que Letterboxd es para el cine, pero para el teatro porteño (por ahora) — que es un
+circuito enorme, vivo, con salas independientes en cada barrio, y sin ninguna herramienta
+que te deje llevar la cuenta.
+
+> `teatro-diario` es el nombre del repo, no el del producto. El nombre real todavía no
+> existe (P2 en el decision log). Si se te ocurre uno bueno, abrí un issue.
+
+---
+
+## Por qué existe
+
+El espectador intensivo de teatro de CABA —el que ve 15, 30, 50 obras por año— hoy
+registra lo que ve en **stories de Instagram**, entradas guardadas en un cajón y memoria.
+Las tres se borran. La story se va a las 24 horas, la entrada se pierde, y a los dos años
+no te acordás si viste ese Chéjov en el San Martín en 2019 o en 2021, ni quién lo dirigía,
+ni qué te había parecido.
+
+Y no es que falten plataformas: Alternativa Teatral y Plateanet resuelven cartelera y
+venta de entradas, muy bien. Pero ninguna resuelve la otra mitad, que es la personal:
+**tu historial, tus puntajes, lo que escribiste, lo que vieron los tuyos.** El competidor
+real de este proyecto es Instagram, no la cartelera.
+
+Entonces la apuesta es concreta: que registrar una obra al salir del teatro sea igual de
+fácil que subir una story, y que te devuelva lo que la story estructuralmente no puede
+darte — un historial buscable, la producción como ficha con su elenco y las opiniones de
+otros, y las estadísticas de tu propio año teatral.
+
+### La parte honesta
+
+Yo no soy el usuario de este producto. Voy poco al teatro; la idea sale de conversaciones
+con gente que sí va muchísimo y que se queja de exactamente esto. Eso es un riesgo real y
+está anotado como tal, con nombre y apellido, en
+[docs/roadmap/RISKS.md](docs/roadmap/RISKS.md) (R1) y como supuesto S1 en el
+[decision log](docs/decisions/DECISION_LOG.md).
+
+La contramedida no es convencerme de que tengo razón: es mantener el MVP chico para que,
+si el supuesto es falso, la pérdida sea de meses y no de años. Y una beta cerrada con
+espectadores de verdad antes de cantar victoria.
+
+Es un proyecto de **una persona, ~5-6 horas por semana**, en paralelo a trabajo y
+facultad. Eso no es un disclaimer: es una restricción de diseño que aparece en casi todas
+las decisiones técnicas del repo (principio P3).
+
+---
+
+## Por qué es open source
+
+Es gratuito y open source desde la decisión número cinco del proyecto, antes de que
+existiera una línea de código (D5). Los motivos, sin épica:
+
+**El código no es la parte difícil.** Lo difícil acá es el catálogo: alguien tiene que
+cargar a mano y mantener las fichas del teatro de CABA, porque no existe un TMDb del
+teatro porteño. Ese trabajo no lo copia nadie con un `git clone`. Así que cerrar el
+código no protegería nada, y abrirlo sí aporta algo.
+
+**Es un registro público de cómo se construye algo así.** El repo no tiene solo código:
+tiene el proceso entero de fundación en [docs/](docs/) — visión, dominio, alcance,
+arquitectura, stack, riesgos — y sobre todo un
+[decision log](docs/decisions/DECISION_LOG.md) donde cada decisión está anotada con su
+porqué, junto con lo que se descartó y por qué se descartó. Incluidas las decisiones
+incómodas y las veces que hubo que corregir el rumbo (ver D51, el ajuste de ritmo después
+de una sobrecarga real). Si alguna vez te preguntaste cómo se piensa un proyecto antes de
+escribirlo, está todo acá adentro.
+
+**Un producto sobre cultura pública debería poder auditarse.** Todo el contenido de la
+plataforma es público por diseño (D21): no hay perfiles privados, no hay contenido oculto.
+Que el código que lo maneja también lo sea es coherente.
+
+**Licencia AGPL-3.0** (D46), y la elección es deliberada: protege contra el clon cerrado
+tipo SaaS. Si alguien levanta este código como servicio, tiene que publicar sus cambios.
+Copyleft fuerte, no "open source de vidriera".
+
+Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestructura:
+**máximo USD 10 por mes**, y cada dólar hay que defenderlo (P9).
+
+---
+
+## Estado actual
+
+**Fase 1 de 5 — el backend del catálogo.** Todavía no hay nada que puedas *usar*: hay una
+API que responde.
+
+Lo que funciona hoy:
+
+- CRUD de **salas**, **personas** y **producciones** (con participaciones, roles y estados)
+- Endpoints públicos de lectura: ficha de producción, página de artista, página de sala,
+  y "en cartel"
+
+Lo que todavía no existe, a propósito y en este orden:
+
+| | Cuándo |
+|---|---|
+| Login y cuentas (Spring Security) | Fase 2 |
+| El diario: registros, ratings, reseñas, estadísticas | Fase 2 |
+| Follow, feed y likes | Fase 3 |
+| **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
+| Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
+
+La regla del roadmap es que las herramientas entran **cuando aparece su problema**, no por
+adelantado. Por eso hoy no hay Flyway (el esquema lo genera Hibernate con `ddl-auto: update`,
+D53) ni Spring Security (D52): sin datos de producción que proteger y sin login que
+implementar, serían ceremonia. Cada una tiene su condición de reentrada escrita.
+
+Detalle completo en [docs/roadmap/ROADMAP.md](docs/roadmap/ROADMAP.md).
+
+---
+
+## Cómo está construido
+
+| Capa | Elección |
+|---|---|
+| Backend | Java 21 + Spring Boot (+ Spring Modulith para verificar los límites) |
+| Base de datos | PostgreSQL — la búsqueda del MVP se resuelve con `pg_trgm`, sin motor aparte |
+| Frontend | Next.js (React + SSR), decidido pero todavía no empezado |
+| Infra | Docker Compose sobre un VPS chico + Caddy para HTTPS |
+
+Cuatro módulos dentro de un **monolito modular** (ADR-001): `identidad`, `catalogo`,
+`diario`, `social`, más una capa de `aplicacion` que los compone. Cada módulo expone una
+interfaz pública y esconde el resto en `internal/`. Nada cruza límites por los costados:
+ni imports internos ajenos, ni queries a tablas de otro módulo. El único acoplamiento
+permitido de todo el sistema es `Diario → Catálogo`.
+
+Sin colas, sin brokers, sin mensajería asincrónica (ADR-002). Todo síncrono e in-process,
+con una escalera escrita de qué haría falta para justificar el próximo peldaño. "Escala"
+no es un argumento válido en este repo si no viene con un problema concreto adelante.
+
+Dos reglas de dominio que parecen detalles y no lo son:
+
+- **El promedio de una producción no es un `AVG()`**: es el promedio del *último* rating de
+  cada usuario, porque se permite registrar la misma obra varias veces (D19/D20).
+- **La fecha de un registro es opcional y difusa** — día exacto, mes y año, solo año, o sin
+  fecha. Así se puede cargar historial viejo sin caminos especiales.
+
+---
+
+## Correrlo local
+
+Hace falta Java 21 y Docker.
+
+```bash
+git clone https://github.com/RamiroAbadie/teatro-diario.git
+cd teatro-diario
+
+cp .env.example .env      # completá DB_PASSWORD con algo largo y aleatorio
+
+docker compose up -d postgres
+
+cd backend
+DB_PASSWORD=$(grep DB_PASSWORD ../.env | cut -d= -f2) ./mvnw spring-boot:run
+```
+
+Queda escuchando en `http://localhost:8080`. Las tablas se crean solas al arrancar.
+
+```bash
+# crear una sala
+curl -X POST localhost:8080/api/admin/salas \
+  -H 'Content-Type: application/json' \
+  -d '{"nombre":"Sala Casacuberta","complejo":"Teatro San Martín"}'
+
+# ver qué hay en cartel
+curl localhost:8080/api/en-cartel
+```
+
+Ojo: `/api/admin/**` todavía **no tiene autenticación** — Spring Security entra en la
+Fase 2. No expongas esto a internet.
+
+Los secretos van siempre por variables de entorno; el `.env` está en `.gitignore` desde el
+primer commit y nunca hubo una credencial en el repo (D48).
+
+---
+
+## El repo por dentro
+
+```
+backend/         Spring Boot: los cuatro módulos + la capa de aplicación
+docs/            toda la documentación fundacional — empezá por docs/README.md
+caddy/           config del reverse proxy (congelada hasta la fase de deploy)
+docker-compose.yml
+CLAUDE.md        contexto y reglas innegociables para asistentes de IA
+```
+
+Es un monorepo (D47): backend, frontend y docs en un solo lugar, un solo tablero de issues,
+las features full-stack viajan en un PR.
+
+### Por dónde empezar a leer
+
+| Si querés entender... | Leé |
+|---|---|
+| el producto | [PRODUCT_VISION.md](docs/product/PRODUCT_VISION.md) y [CORE_LOOP.md](docs/product/CORE_LOOP.md) |
+| qué entra y qué no en el MVP | [MVP_SCOPE.md](docs/product/MVP_SCOPE.md) (está congelado) |
+| el sistema | [MODULE_MAP.md](docs/architecture/MODULE_MAP.md) y [ARCHITECTURE.md](docs/architecture/ARCHITECTURE.md) |
+| **por qué todo es como es** | [DECISION_LOG.md](docs/decisions/DECISION_LOG.md) — la fuente de verdad |
+
+Regla de mantenimiento de los docs: si la realidad contradice un documento, se actualiza
+el documento y el log registra el cambio. Un documento desactualizado es peor que ninguno.
+
+---
+
+## Contribuir
+
+Sí, aunque con una advertencia amable: el alcance del MVP está **congelado** y las
+decisiones están tomadas y justificadas. Un PR que agregue Redis, Kafka, un framework
+nuevo o una feature que no está en el scope va a ser rechazado, aunque el código sea
+impecable. No es soberbia — es la única forma de que un proyecto de una persona a 5 horas
+por semana llegue a algún lado.
+
+Lo que sí sirve muchísimo:
+
+- **Issues.** Si algo del diseño no cierra, decilo. Ya hubo dos decisiones (D29, D30) que
+  salieron de una revisión externa y que corrigieron errores reales.
+- **Bugs y PRs chicos** contra una historia existente de
+  [USER_STORIES.md](docs/product/USER_STORIES.md).
+- **Saber de teatro porteño.** Esto vale más que el código: la calidad del catálogo es el
+  activo central del producto y su riesgo número dos.
+
+Antes de mandar un PR, pasá por el [decision log](docs/decisions/DECISION_LOG.md) y por
+[CLAUDE.md](CLAUDE.md) — ese último archivo son las reglas innegociables, escritas para
+asistentes de IA pero igual de válidas para humanos.
+
+---
+
+## Licencia
+
+[AGPL-3.0](LICENSE). Usalo, estudialo, modificalo, corrélo. Si lo ofrecés como servicio,
+publicá tus cambios.

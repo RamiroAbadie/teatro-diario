@@ -11,20 +11,28 @@
 	<groupId>io.github.ramiroabadie</groupId>
 	<artifactId>backend</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name/>
-	<description/>
-	<url/>
+	<name>teatro-diario backend</name>
+	<description>Backend del diario personal del teatro de Buenos Aires</description>
+	<url>https://github.com/RamiroAbadie/teatro-diario</url>
 	<licenses>
-		<license/>
+		<license>
+			<name>GNU Affero General Public License v3.0</name>
+			<url>https://www.gnu.org/licenses/agpl-3.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
 	</licenses>
 	<developers>
-		<developer/>
+		<developer>
+			<id>RamiroAbadie</id>
+			<name>Ramiro Abadie</name>
+			<url>https://github.com/RamiroAbadie</url>
+		</developer>
 	</developers>
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection>scm:git:https://github.com/RamiroAbadie/teatro-diario.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/RamiroAbadie/teatro-diario.git</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/RamiroAbadie/teatro-diario</url>
 	</scm>
 	<properties>
 		<java.version>21</java.version>
