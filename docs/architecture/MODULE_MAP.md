@@ -10,7 +10,8 @@
 ### Identidad
 - **Responsabilidad:** cuentas, autenticación, perfil.
 - **Autoridad sobre:** usuarios (credenciales, datos de perfil).
-- **Expone:** alta/login, consulta de perfiles (para composición en lecturas).
+- **Expone:** alta/login, consulta de perfiles (para composición en lecturas), búsqueda de
+  usuarios (D23: cada módulo busca sobre lo suyo; la de usuarios es de acá).
 - **Depende de:** nadie.
 
 ### Catálogo
@@ -49,7 +50,7 @@
 |---|---|
 | **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios |
 | **Fusión de fichas duplicadas** (D63) | Mismo patrón: caso de uso de composición en la capa de aplicación. Diario muda los registros, Catálogo borra la ficha vacía, y las dos cosas pasan en una transacción. Ninguno de los dos módulos se entera del otro |
-| **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23). Módulo propio solo si algún día hay motor dedicado |
+| **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23): tres endpoints bajo `/api/buscar/...`, dos de Catálogo y uno de Identidad, sin composición en el medio porque ninguno necesita datos del otro (D65). Módulo propio solo si algún día hay motor dedicado |
 | **Autorización** | Partida en dos, y a propósito (D61). *Quién sos* y *si sos admin* son transversales: la capa de aplicación traduce la sesión a un `user_id` y sostiene el candado de `/api/admin/**`. *Si este dato es tuyo* lo hace cumplir el módulo dueño del dato, con el `user_id` que le pasan: Diario rechaza editar o borrar un registro ajeno |
 | **Notificaciones, emails** | No existen en el MVP |
 

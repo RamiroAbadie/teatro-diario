@@ -83,8 +83,8 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 
 ## Estado actual
 
-**Fase 2 de 5 — identidad y diario.** Todavía no hay nada que puedas *usar*: hay una
-API que responde.
+**Fase 2 terminada, entrando en la 3 — lo social.** Todavía no hay nada que puedas *usar*:
+hay una API que responde.
 
 Lo que funciona hoy:
 
@@ -97,12 +97,14 @@ Lo que funciona hoy:
   propio, y el perfil público con el historial y las estadísticas
 - **Promedio y reseñas** de cada producción, con el promedio de D20 —el último rating de
   cada usuario— y no un `AVG()`
+- **Búsqueda** de producciones, personas y usuarios con `pg_trgm`: aguanta el error de
+  tipeo y el título escrito a medias, que es lo que hace usable buscar la obra al momento
+  de registrarla
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| Búsqueda con `pg_trgm` sobre producciones, personas y usuarios | Fase 2 |
 | Follow, feed y likes | Fase 3 |
 | **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
@@ -216,6 +218,16 @@ curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
 
 curl localhost:8080/api/usuarios/tuusuario        # tu diario y tus números
 curl localhost:8080/api/producciones/1/opiniones  # promedio y reseñas de esa ficha
+```
+
+Buscar tampoco pide cuenta, y perdona bastante: el `q` va como parámetro y las tres
+búsquedas viven en la misma familia de rutas, una por tipo de cosa (las salas no se buscan,
+se navegan desde las fichas, D23).
+
+```bash
+curl "localhost:8080/api/buscar/producciones?q=terenal"   # con el typo y todo
+curl "localhost:8080/api/buscar/personas?q=marini"
+curl "localhost:8080/api/buscar/usuarios?q=tuusu"
 ```
 
 La granularidad de la fecha es `DIA`, `MES`, `ANIO` o `SIN_FECHA`: es la que decide hasta

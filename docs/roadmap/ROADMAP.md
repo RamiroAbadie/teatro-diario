@@ -27,7 +27,7 @@ con un comando (`docker compose up -d postgres`) · CI que compila en cada push 
 **Criterio de salida:** desde un cliente HTTP (curl/Postman) podés crear y consultar
 el catálogo completo. **Herramientas nuevas usadas: cero.**
 
-## Fase 2 — Identidad y Diario (el corazón) (AHORA)
+## Fase 2 — Identidad y Diario (el corazón) (HECHA)
 
 - ~~Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).~~ Hecho
   en D56/D57, con el candado de `/api/admin/**` y los primeros tests del proyecto.
@@ -40,9 +40,14 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   confirmación de borrado y los estados vacíos son pantallas (Fase 4). Las historias se
   cierran del todo cuando cierren sus fases; el backend ya no las bloquea.
   Decisiones que hicieron falta: D58, D59, D60 y D61.
-- Búsqueda pg_trgm (HU-07).
+- ~~Búsqueda pg_trgm (HU-07).~~ Hecha: tres endpoints de búsqueda —producciones y personas
+  en Catálogo, usuarios en Identidad—, con tolerancia a typos y a títulos escritos a medias,
+  que es lo que hace usable el autocompletado del gesto de registro (HU-09). Decisiones que
+  hicieron falta: D64 (cómo entran la extensión y sus índices sin Flyway) y D65 (la forma).
+  Lo que a HU-07 le falta es pantalla: el resultado vacío que deriva a sugerir necesita HU-08
+  (Fase 3) y la pantalla de resultados es Fase 4.
 
-## Fase 3 — Social
+## Fase 3 — Social (AHORA)
 
 - Follow, feed compuesto, likes, sugerencias, reportes (HU-15..18, 21, 22).
 
