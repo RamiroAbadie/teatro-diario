@@ -213,12 +213,17 @@ class DiarioTest {
 	/**
 	 * MD-2 en el caso borde que la normalización de D59 provoca: una fecha exacta que cae justo
 	 * en el comienzo de un período difuso queda guardada con la misma fecha que él. El 1 de enero
-	 * de 2023 y "2023" a secas son los dos el 2023-01-01, y el orden no lo puede decidir la fecha
-	 * sola — lo decide la precisión: primero el día exacto, después el mes, después el año.
+	 * de 2023, "enero de 2023" y "2023" a secas son los tres el 2023-01-01, y el orden no lo
+	 * puede decidir la fecha sola — lo decide la precisión: primero el día, después el mes,
+	 * después el año.
+	 *
+	 * <p>Están las tres colisiones posibles: día contra mes (junio), día contra año y mes contra
+	 * año (enero, donde chocan las tres granularidades a la vez).</p>
 	 */
 	@Test
 	void unaFechaExactaLeGanaAlPeriodoDifusoQueEmpiezaElMismoDia() throws Exception {
 		Long primeroDeEnero = crearProduccion("La del 1 de enero");
+		Long todoEnero = crearProduccion("La de algún día de enero");
 		Long todoElAnio = crearProduccion("La de algún momento de 2023");
 		Long primeroDeJunio = crearProduccion("La del 1 de junio");
 		Long todoJunio = crearProduccion("La de algún día de junio");
@@ -228,13 +233,15 @@ class DiarioTest {
 		registrar(sesion, primeroDeJunio, "2023-06-01", "DIA", null, null);
 		registrar(sesion, todoJunio, "2023-06-30", "MES", null, null);
 		registrar(sesion, primeroDeEnero, "2023-01-01", "DIA", null, null);
+		registrar(sesion, todoEnero, "2023-01-20", "MES", null, null);
 		registrar(sesion, todoElAnio, "2023-08-08", "ANIO", null, null);
 
 		mockMvc.perform(get("/api/usuarios/celeste"))
 				.andExpect(jsonPath("$.registros[0].produccion.id").value(primeroDeJunio))
 				.andExpect(jsonPath("$.registros[1].produccion.id").value(todoJunio))
 				.andExpect(jsonPath("$.registros[2].produccion.id").value(primeroDeEnero))
-				.andExpect(jsonPath("$.registros[3].produccion.id").value(todoElAnio));
+				.andExpect(jsonPath("$.registros[3].produccion.id").value(todoEnero))
+				.andExpect(jsonPath("$.registros[4].produccion.id").value(todoElAnio));
 	}
 
 	/** HU-13 y D26: los números son solo sobre registros propios. */
@@ -365,7 +372,13 @@ class DiarioTest {
 				.andExpect(jsonPath("$.registros[0].rating").value(7));
 	}
 
-	/** La copia del título es un respaldo, no la verdad: si el admin corrige la ficha, gana la ficha. */
+	/**
+	 * La copia del título es un respaldo, no la verdad: si el admin corrige la ficha, gana la
+	 * ficha. Y el límite que eso deja, escrito para que no sorprenda: la copia es del momento de
+	 * registrar, así que corregir el título y borrar la ficha después devuelve al diario el
+	 * título viejo. Mantenerla al día necesita que Catálogo le avise a Diario, y eso son eventos
+	 * (D31), que en el MVP no existen. Aceptado en D62.
+	 */
 	@Test
 	void corregirElTituloDeLaFichaSeVeEnLosDiariosQueYaLaTenian() throws Exception {
 		Long produccion = crearProduccion("Traspié en el título");
@@ -380,6 +393,14 @@ class DiarioTest {
 		mockMvc.perform(get("/api/usuarios/renata"))
 				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("Título como corresponde"))
 				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(true));
+
+		mockMvc.perform(conCsrf(delete("/api/admin/producciones/" + produccion))
+				.with(user("jefa").roles("ADMIN")))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/usuarios/renata"))
+				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("Traspié en el título"))
+				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(false));
 	}
 
 	private Long crearProduccion(String titulo) throws Exception {

@@ -49,17 +49,22 @@ class RegistroService implements Diario {
 
 	/**
 	 * El orden del diario (MD-2), completo: fecha más nueva primero; a igual fecha, la más
-	 * precisa primero —el 1 de enero de 2023 antes que "2023" a secas, que empiezan el mismo día
-	 * después de normalizar (D59)—; y recién ahí desempata la carga más reciente.
+	 * precisa primero —el 1 de enero de 2023, después "enero de 2023", después "2023" a secas,
+	 * que empiezan todos el mismo día después de normalizar (D59)—; y recién ahí, la carga más
+	 * reciente. El id cierra la lista para que el orden sea total: dos registros creados en el
+	 * mismo microsegundo son improbables, pero si pasa, el orden no puede quedar librado a cómo
+	 * salieron de la base.
 	 */
 	private static final Comparator<Registro> ORDEN_DEL_DIARIO = Comparator
 			.comparing(Registro::getFecha, Comparator.reverseOrder())
 			.thenComparing(registro -> precision(registro.getGranularidad()), Comparator.reverseOrder())
-			.thenComparing(Registro::getCreadoEn, Comparator.reverseOrder());
+			.thenComparing(Registro::getCreadoEn, Comparator.reverseOrder())
+			.thenComparing(Registro::getId, Comparator.reverseOrder());
 
 	/** Los sin fecha no tienen por dónde ordenarse más que por cuándo se cargaron. */
 	private static final Comparator<Registro> ORDEN_SIN_FECHA =
-			Comparator.comparing(Registro::getCreadoEn, Comparator.reverseOrder());
+			Comparator.comparing(Registro::getCreadoEn, Comparator.reverseOrder())
+					.thenComparing(Registro::getId, Comparator.reverseOrder());
 
 	private final RegistroRepository repositorio;
 
@@ -195,7 +200,11 @@ class RegistroService implements Diario {
 				.orElseThrow(() -> new ProduccionInexistenteException(produccionId));
 	}
 
-	/** La autorización de dueño (D30): el registro existe, pero no es de quien lo quiere tocar. */
+	/**
+	 * La autorización de dueño (D61): el registro existe, pero no es de quien lo quiere tocar.
+	 * Vive acá y no en la capa de aplicación porque leer el dueño y después escribir son dos
+	 * viajes con una ventana en el medio; el módulo que tiene el dato lo resuelve en uno.
+	 */
 	private Registro propio(Long usuarioId, Long registroId) {
 		Registro registro = repositorio.findById(registroId)
 				.orElseThrow(() -> new RegistroNoEncontradoException(registroId));
