@@ -58,7 +58,8 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   antes de datos reales.
 - Descongelar Dockerfiles + Caddy + Compose completo (ya escritos, están en el repo).
   VPS, HTTPS, backups probados (D45).
-- Subida de afiches (lo único de HU-20 que quedó pendiente), panel admin pulido.
+- Lo que le queda a HU-20: subida de afiches, y las pantallas de lo que ya tiene backend
+  —entre ellas el botón de fusionar duplicados y su confirmación (D63)—. Panel admin pulido.
 - Carga de las ~50 fichas (D38) + beta cerrada con espectadores reales (métricas de
   MVP_SCOPE.md).
 

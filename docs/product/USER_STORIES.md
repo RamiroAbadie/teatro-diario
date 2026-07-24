@@ -1,6 +1,6 @@
 # User Stories — MVP
 
-> Estado: v1.0. Las historias del MVP congelado (D27 + D40), con criterios de aceptación
+> Estado: v1.1. Las historias del MVP congelado (D27 + D40 + D63), con criterios de aceptación
 > verificables. Cada historia es trazable a decisiones del log — **una historia que no
 > mapea a ninguna decisión es scope colándose y requiere decisión explícita antes de
 > implementarse.** Estas historias son la fuente de los issues de GitHub de las Fases 1-3.
@@ -155,6 +155,7 @@ desestimar reporte; ambas sacan el ítem de la cola.
 
 ## Cobertura
 
-Estas 22 historias cubren los 11 puntos de MVP_SCOPE.md + D40. Cualquier historia nueva
+Estas 22 historias cubren los 11 puntos de MVP_SCOPE.md + D40 + D63 (que amplía HU-20 con
+la fusión de duplicados, sin sumar historia nueva). Cualquier historia nueva
 que aparezca durante el desarrollo se contrasta primero contra el log: si no mapea a una
 decisión, es cambio de alcance (D27).
