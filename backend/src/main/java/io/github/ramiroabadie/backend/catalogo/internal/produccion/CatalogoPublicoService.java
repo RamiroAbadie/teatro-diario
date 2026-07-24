@@ -40,12 +40,16 @@ class CatalogoPublicoService implements CatalogoProducciones {
 
 	private final SalaService salas;
 
+	/** La cara de escritura, para el único caso en que la interfaz pública escribe: la fusión. */
+	private final ProduccionService escrituras;
+
 	CatalogoPublicoService(ProduccionRepository producciones, ParticipacionRepository participaciones,
-			PersonaService personas, SalaService salas) {
+			PersonaService personas, SalaService salas, ProduccionService escrituras) {
 		this.producciones = producciones;
 		this.participaciones = participaciones;
 		this.personas = personas;
 		this.salas = salas;
+		this.escrituras = escrituras;
 	}
 
 	/**
@@ -109,6 +113,16 @@ class CatalogoPublicoService implements CatalogoProducciones {
 			porId.put(produccion.getId(), basica(produccion));
 		}
 		return porId;
+	}
+
+	/**
+	 * El borrado de la interfaz pública es el mismo del panel, sin nada nuevo: quien decide si
+	 * corresponde borrar es el admin, acá o desde {@code ProduccionController}.
+	 */
+	@Override
+	@Transactional
+	public void borrar(Long id) {
+		escrituras.borrar(id);
 	}
 
 	private static ProduccionBasica basica(Produccion produccion) {

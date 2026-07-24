@@ -35,6 +35,20 @@ public interface Diario {
 	 */
 	void borrar(Long usuarioId, Long registroId);
 
+	/**
+	 * Muda todos los registros de una producción a otra y devuelve cuántos movió (D63). La usa la
+	 * fusión de fichas duplicadas: los registros conservan su id —así los likes y reportes que
+	 * lleguen en la Fase 3 no se pierden—, su fecha, su puntaje y su reseña, y solo cambian de
+	 * obra. Si alguien había registrado las dos fichas, sus registros quedan como re-vistos de la
+	 * misma producción, que es lo que siempre fueron (D19).
+	 *
+	 * <p>No borra la ficha vieja: eso es de Catálogo, y quien ordena las dos cosas en una sola
+	 * transacción es la capa de aplicación.</p>
+	 *
+	 * @throws ProduccionInexistenteException si el destino no está en el catálogo
+	 */
+	int reasignarRegistros(Long produccionOrigenId, Long produccionDestinoId);
+
 	/** El diario y las estadísticas de una persona (HU-12/13). Público como todo (D21). */
 	DiarioDeUsuario deUsuario(Long usuarioId);
 

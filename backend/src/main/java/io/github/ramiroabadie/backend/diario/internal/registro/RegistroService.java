@@ -102,6 +102,18 @@ class RegistroService implements Diario {
 	}
 
 	/**
+	 * La mudanza de la fusión (D63). El título del destino se lee acá y no lo pasa quien llama:
+	 * validar que la producción existe y traer su título es lo que Diario ya sabe hacer, y así no
+	 * hay forma de mudar registros a una ficha que no está.
+	 */
+	@Override
+	@Transactional
+	public int reasignarRegistros(Long produccionOrigenId, Long produccionDestinoId) {
+		ProduccionBasica destino = produccionDe(produccionDestinoId);
+		return repositorio.reasignar(produccionOrigenId, destino.id(), destino.titulo());
+	}
+
+	/**
 	 * El diario completo, sin paginar: es el historial de una persona, no un feed. Las
 	 * estadísticas salen de los mismos registros que ya están en memoria (HU-13).
 	 */

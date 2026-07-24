@@ -3,6 +3,7 @@ package io.github.ramiroabadie.backend.diario.internal.registro;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -28,6 +29,19 @@ interface RegistroRepository extends JpaRepository<Registro, Long> {
 
 	/** Las reseñas de la ficha (HU-14): las más nuevas primero. */
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);
+
+	/**
+	 * La mudanza de la fusión (D63), en una sola sentencia: los registros de la ficha duplicada
+	 * pasan a la canónica y se llevan el título nuevo, porque la copia que guardaban era la de la
+	 * ficha que está por desaparecer.
+	 */
+	@Modifying(clearAutomatically = true)
+	@Query("""
+			update Registro r set r.produccionId = :destinoId, r.tituloProduccion = :tituloDestino
+			where r.produccionId = :origenId
+			""")
+	int reasignar(@Param("origenId") Long origenId, @Param("destinoId") Long destinoId,
+			@Param("tituloDestino") String tituloDestino);
 
 	/**
 	 * ⚠️ El promedio de D20: NO es {@code avg(rating)} sobre todos los registros. Con re-visto

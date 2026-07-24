@@ -19,4 +19,12 @@ public interface CatalogoProducciones {
 
 	/** Los títulos de un diario entero en una sola consulta. Los ids que no existen no vienen. */
 	Map<Long, ProduccionBasica> porIds(Collection<Long> ids);
+
+	/**
+	 * Borra una ficha. Escritura solo-admin, como todas las del catálogo (D7): quien la invoca es
+	 * la curaduría, y hoy la usa la fusión de duplicados (D63) para sacar de circulación la ficha
+	 * que quedó vacía. Explota si la producción no existe, así que hay que preguntar antes con
+	 * {@link #porId}: la excepción es interna del módulo y afuera no se puede ni nombrar.
+	 */
+	void borrar(Long id);
 }
