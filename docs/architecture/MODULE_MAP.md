@@ -48,7 +48,7 @@
 |---|---|
 | **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios |
 | **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23). Módulo propio solo si algún día hay motor dedicado |
-| **Autorización** (admin, dueño-del-registro) | Concern transversal de la capa de aplicación |
+| **Autorización** | Partida en dos, y a propósito (D61). *Quién sos* y *si sos admin* son transversales: la capa de aplicación traduce la sesión a un `user_id` y sostiene el candado de `/api/admin/**`. *Si este dato es tuyo* lo hace cumplir el módulo dueño del dato, con el `user_id` que le pasan: Diario rechaza editar o borrar un registro ajeno |
 | **Notificaciones, emails** | No existen en el MVP |
 
 ## Grafo de dependencias (real, no estético)

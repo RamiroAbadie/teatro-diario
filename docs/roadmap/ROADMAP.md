@@ -32,9 +32,14 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
 - ~~Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).~~ Hecho
   en D56/D57, con el candado de `/api/admin/**` y los primeros tests del proyecto.
 - ~~El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats
-  (HU-12/13/14).~~ Hecho, con los tres criterios que no eran obvios resueltos en
-  D58 (qué es el "último" rating), D59 (cómo se guarda la fecha difusa) y D60 (dónde
-  viven los controladores del diario y por qué no adentro del módulo).
+  (HU-12/13/14).~~ Hecho **el backend**, que es lo único que esta fase puede cerrar:
+  registrar / editar / borrar, el promedio de D20, el diario ordenado, las stats y las
+  reseñas de la ficha, con tests de aceptación. Lo que a esas historias todavía les falta
+  no se construye acá: el autocompletado es HU-07 (el punto que sigue), la derivación a
+  sugerir es HU-08 y los likes que pide HU-14 son HU-17 — las dos, Fase 3 —, y la
+  confirmación de borrado y los estados vacíos son pantallas (Fase 4). Las historias se
+  cierran del todo cuando cierren sus fases; el backend ya no las bloquea.
+  Decisiones que hicieron falta: D58, D59, D60 y D61.
 - Búsqueda pg_trgm (HU-07).
 
 ## Fase 3 — Social
