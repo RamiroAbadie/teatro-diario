@@ -1,10 +1,16 @@
 package io.github.ramiroabadie.backend.catalogo.internal.produccion;
 
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.ramiroabadie.backend.catalogo.CatalogoProducciones;
+import io.github.ramiroabadie.backend.catalogo.ProduccionBasica;
 import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaResponse;
 import io.github.ramiroabadie.backend.catalogo.internal.persona.PersonaService;
 import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaResponse;
@@ -16,12 +22,15 @@ import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaService;
  * {@code ProduccionService} a propósito: son las mismas entidades pero la otra cara — sin
  * login (D21) y de solo lectura, mientras que la de escritura queda solo-admin (D7).
  *
- * <p>La ficha todavía no trae promedio ni reseñas: eso es del módulo Diario, que no existe
- * hasta la Fase 2, y se va a componer en la capa de aplicación (D20, HU-14) sin que Catálogo
- * dependa de nadie.</p>
+ * <p>La ficha no trae promedio ni reseñas: eso es del módulo Diario y se sirve aparte, en
+ * {@code /api/producciones/{id}/opiniones}, compuesto en la capa de aplicación (D20, HU-14).
+ * Catálogo sigue sin depender de nadie.</p>
+ *
+ * <p>Es también el adaptador de la interfaz pública del módulo ({@link CatalogoProducciones}):
+ * la cara de lectura del catálogo es la misma para HTTP que para Diario, cambia el formato.</p>
  */
 @Service
-class CatalogoPublicoService {
+class CatalogoPublicoService implements CatalogoProducciones {
 
 	private final ProduccionRepository producciones;
 
@@ -79,6 +88,31 @@ class CatalogoPublicoService {
 		SalaResponse sala = salas.obtener(salaId);
 		return SalaPublicaResponse.desde(sala,
 				producciones.findBySalaIdAndEstadoOrderByTituloAsc(salaId, EstadoProduccion.EN_CARTEL));
+	}
+
+	/**
+	 * Interfaz pública del módulo: la usa Diario para validar que la producción que se registra
+	 * existe (HU-09), que es la única dependencia módulo-a-módulo del sistema.
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<ProduccionBasica> porId(Long id) {
+		return producciones.findById(id).map(CatalogoPublicoService::basica);
+	}
+
+	/** El diario entero resuelve sus títulos con esta sola consulta. */
+	@Override
+	@Transactional(readOnly = true)
+	public Map<Long, ProduccionBasica> porIds(Collection<Long> ids) {
+		Map<Long, ProduccionBasica> porId = new LinkedHashMap<>();
+		for (Produccion produccion : producciones.findAllById(ids)) {
+			porId.put(produccion.getId(), basica(produccion));
+		}
+		return porId;
+	}
+
+	private static ProduccionBasica basica(Produccion produccion) {
+		return new ProduccionBasica(produccion.getId(), produccion.getTitulo());
 	}
 
 	private List<ProduccionResumenResponse> resumir(List<Produccion> producciones, EstadoProduccion estado) {

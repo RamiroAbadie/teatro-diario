@@ -1,18 +1,28 @@
 package io.github.ramiroabadie.backend.identidad.internal.usuario;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import io.github.ramiroabadie.backend.identidad.UsuarioPublico;
+import io.github.ramiroabadie.backend.identidad.Usuarios;
+
 /**
  * Casos de uso de la cuenta: alta (HU-01) y lectura de la cuenta propia. La autenticación en sí
  * la maneja Spring Security a través de {@link UsuarioDetailsService}.
+ *
+ * <p>Es también el adaptador de la interfaz pública del módulo ({@link Usuarios}): la misma
+ * cuenta vista desde afuera, sin email y sin hash.</p>
  */
 @Service
-public class UsuarioService {
+public class UsuarioService implements Usuarios {
 
 	private final UsuarioRepository repositorio;
 
@@ -57,6 +67,30 @@ public class UsuarioService {
 		return repositorio.findByUsername(username)
 				.map(CuentaResponse::desde)
 				.orElseThrow(() -> new SesionSinCuentaException(username));
+	}
+
+	/**
+	 * Perfil público por username (HU-03). Normaliza igual que el alta: la URL del perfil puede
+	 * venir con cualquier combinación de mayúsculas y tiene que llegar al mismo lado (MD-4).
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public Optional<UsuarioPublico> porUsername(String username) {
+		return repositorio.findByUsername(normalizar(username)).map(UsuarioService::publico);
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public Map<Long, UsuarioPublico> porIds(Collection<Long> ids) {
+		Map<Long, UsuarioPublico> porId = new LinkedHashMap<>();
+		for (Usuario usuario : repositorio.findAllById(ids)) {
+			porId.put(usuario.getId(), publico(usuario));
+		}
+		return porId;
+	}
+
+	private static UsuarioPublico publico(Usuario usuario) {
+		return new UsuarioPublico(usuario.getId(), usuario.getUsername(), usuario.getCreadoEn());
 	}
 
 	static String normalizar(String valor) {
