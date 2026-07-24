@@ -3,6 +3,7 @@ package io.github.ramiroabadie.backend.identidad.internal.usuario;
 import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
@@ -39,6 +40,9 @@ public class UsuarioService implements Usuarios {
 	 * son 80 bytes. Sin este control, esa contraseña pasa la validación y revienta al hashear.
 	 */
 	private static final int MAXIMO_BYTES_PASSWORD = 72;
+
+	/** Lo mismo que en las búsquedas del catálogo: una pantalla de resultados, sin paginar. */
+	private static final int LIMITE_DE_RESULTADOS = 10;
 
 	@Transactional
 	public CuentaResponse registrar(RegistroRequest req) {
@@ -77,6 +81,22 @@ public class UsuarioService implements Usuarios {
 	@Transactional(readOnly = true)
 	public Optional<UsuarioPublico> porUsername(String username) {
 		return repositorio.findByUsername(normalizar(username)).map(UsuarioService::publico);
+	}
+
+	/**
+	 * Búsqueda de usuarios (HU-07): el camino para encontrar a quién seguir (HU-15, Fase 3)
+	 * cuando no se llegó a su perfil desde una reseña. Devuelve la cara pública de la cuenta,
+	 * igual que {@link #porUsername}, y no hace falta tener cuenta para usarla (D21).
+	 */
+	@Transactional(readOnly = true)
+	public List<UsuarioPublico> buscar(String texto) {
+		String consulta = texto == null ? "" : texto.trim();
+		if (consulta.isEmpty()) {
+			return List.of();
+		}
+		return repositorio.buscarPorUsername(consulta, LIMITE_DE_RESULTADOS).stream()
+				.map(UsuarioService::publico)
+				.toList();
 	}
 
 	@Override

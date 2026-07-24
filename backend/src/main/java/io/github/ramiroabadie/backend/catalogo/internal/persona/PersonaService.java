@@ -17,6 +17,9 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class PersonaService {
 
+	/** Lo mismo que en la búsqueda de producciones: una pantalla de resultados, sin paginar. */
+	private static final int LIMITE_DE_RESULTADOS = 10;
+
 	private final PersonaRepository repositorio;
 
 	PersonaService(PersonaRepository repositorio) {
@@ -37,6 +40,22 @@ public class PersonaService {
 	@Transactional(readOnly = true)
 	public PersonaResponse obtener(Long id) {
 		return PersonaResponse.desde(buscar(id));
+	}
+
+	/**
+	 * Búsqueda de personas (HU-07): el camino a la página de artista cuando no se llegó a ella
+	 * desde una ficha. Consulta vacía, lista vacía; sin resultados, lista vacía también — de
+	 * personas no se sugieren altas, las crea la carga de fichas (D14).
+	 */
+	@Transactional(readOnly = true)
+	public List<PersonaResponse> buscar(String texto) {
+		String consulta = texto == null ? "" : texto.trim();
+		if (consulta.isEmpty()) {
+			return List.of();
+		}
+		return repositorio.buscarPorNombre(consulta, LIMITE_DE_RESULTADOS).stream()
+				.map(PersonaResponse::desde)
+				.toList();
 	}
 
 	@Transactional

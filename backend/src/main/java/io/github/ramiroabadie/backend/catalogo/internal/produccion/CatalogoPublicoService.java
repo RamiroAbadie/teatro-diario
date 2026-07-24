@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import org.springframework.stereotype.Service;
@@ -31,6 +32,13 @@ import io.github.ramiroabadie.backend.catalogo.internal.sala.SalaService;
  */
 @Service
 class CatalogoPublicoService implements CatalogoProducciones {
+
+	/**
+	 * Los resultados que entran en una pantalla de celular sin scrollear (P8: el gesto de
+	 * registro compite contra subir una story). Si lo que buscás no está en los diez primeros,
+	 * la respuesta útil es escribir mejor la consulta, no paginar.
+	 */
+	private static final int LIMITE_DE_RESULTADOS = 10;
 
 	private final ProduccionRepository producciones;
 
@@ -92,6 +100,45 @@ class CatalogoPublicoService implements CatalogoProducciones {
 		SalaResponse sala = salas.obtener(salaId);
 		return SalaPublicaResponse.desde(sala,
 				producciones.findBySalaIdAndEstadoOrderByTituloAsc(salaId, EstadoProduccion.EN_CARTEL));
+	}
+
+	/**
+	 * Búsqueda de producciones (HU-07) y, con la misma consulta, el autocompletado del gesto de
+	 * registro (HU-09): son la misma pregunta hecha desde dos pantallas.
+	 *
+	 * <p>La consulta vacía no devuelve el catálogo entero: devuelve nada. Un campo de búsqueda
+	 * recién abierto no es un pedido de "mostrame todo", y "en cartel" ya es esa pantalla.</p>
+	 *
+	 * <p>Sin resultados devuelve la lista vacía y no un 404: que no haya nada es una respuesta
+	 * válida de la búsqueda, y es el estado que el frontend convierte en el camino a sugerir
+	 * la producción faltante (HU-08, Fase 3).</p>
+	 */
+	@Transactional(readOnly = true)
+	public List<ProduccionResumenResponse> buscar(String texto) {
+		String consulta = texto == null ? "" : texto.trim();
+		if (consulta.isEmpty()) {
+			return List.of();
+		}
+		List<Long> ids = producciones.buscarIdsPorTitulo(consulta, LIMITE_DE_RESULTADOS);
+		if (ids.isEmpty()) {
+			return List.of();
+		}
+		Map<Long, Produccion> porId = new LinkedHashMap<>();
+		for (Produccion produccion : producciones.findByIdIn(ids)) {
+			porId.put(produccion.getId(), produccion);
+		}
+		// El orden de relevancia es el de los ids: la segunda consulta solo trae las filas.
+		return ids.stream().map(porId::get).filter(Objects::nonNull).map(ProduccionResumenResponse::desde).toList();
+	}
+
+	/**
+	 * Búsqueda de personas (HU-07). Pasa por acá y no directo del controlador al servicio de
+	 * personas por lo mismo que la página de artista: la cara de lectura del catálogo es una,
+	 * aunque los datos vengan de dos paquetes del módulo.
+	 */
+	@Transactional(readOnly = true)
+	public List<PersonaResponse> buscarPersonas(String texto) {
+		return personas.buscar(texto);
 	}
 
 	/**

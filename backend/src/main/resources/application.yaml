@@ -9,6 +9,15 @@ spring:
     hibernate:
       ddl-auto: update
     open-in-view: false
+    # El script de abajo crea índices sobre las tablas, así que tiene que correr después de
+    # que Hibernate las haya creado, no antes (que es cuando corre por defecto).
+    defer-datasource-initialization: true
+  sql:
+    init:
+      # `always` porque el default (`embedded`) no alcanza con Postgres. El archivo no trae
+      # datos: trae lo que la búsqueda necesita de la base y las entidades no pueden declarar.
+      mode: always
+      data-locations: classpath:db/busqueda.sql
 
 # Sesión con cookie HTTP-only (D44). `secure: true` entra en la fase de deploy, cuando
 # haya HTTPS: acá haría que la cookie no viaje en http://localhost.
