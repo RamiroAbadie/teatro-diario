@@ -76,7 +76,8 @@ la ficha del usuario sobre esa producción evidencia que la vio N veces.
 
 **HU-11 · Editar / borrar mi registro** — Como usuario quiero corregir o eliminar un
 registro propio.
-Criterios: solo el dueño (autorización en capa de aplicación, D30); borrar un registro
+Criterios: solo el dueño (quién sos lo resuelve la capa de aplicación; que el registro sea
+tuyo lo hace cumplir el módulo Diario — D61, que matiza a D30); borrar un registro
 recalcula el promedio si correspondía (D20); confirmación antes de borrar.
 
 **HU-12 · Ver mi diario** — Como usuario quiero ver mi historial completo.
