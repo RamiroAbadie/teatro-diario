@@ -2,6 +2,7 @@ package io.github.ramiroabadie.backend.aplicacion;
 
 import com.jayway.jsonpath.JsonPath;
 import io.github.ramiroabadie.backend.TestcontainersConfiguration;
+import io.github.ramiroabadie.backend.catalogo.CatalogoProducciones;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 
@@ -11,11 +12,14 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -38,12 +42,21 @@ class FusionDeProduccionesTest {
 	@Autowired
 	private MockMvc mockMvc;
 
+	/**
+	 * Espía, no reemplazo: el bean real sigue siendo el que atiende a todos los tests de la clase
+	 * —un spy sin stubear delega en el original— y solo el del rollback le pide que falle. Con un
+	 * mock, en cambio, el contexto ni levantaría: {@code CatalogoPublicoController} inyecta la
+	 * clase concreta y se quedaría sin bean.
+	 */
+	@MockitoSpyBean
+	private CatalogoProducciones catalogo;
+
 	@Test
 	void losRegistrosDeLaFichaDuplicadaPasanALaCanonica() throws Exception {
 		Long duplicada = crearProduccion("Un tranvía llamado deseo (duplicada)");
 		Long canonica = crearProduccion("Un tranvía llamado deseo");
 		MockHttpSession sesion = cuenta("valeria");
-		registrar(sesion, duplicada, "2024-04-04", 8, "La vi en la sala chica");
+		Long registro = registrar(sesion, duplicada, "2024-04-04", 8, "La vi en la sala chica");
 
 		fusionar(duplicada, canonica)
 				.andExpect(status().isOk())
@@ -52,6 +65,10 @@ class FusionDeProduccionesTest {
 
 		mockMvc.perform(get("/api/usuarios/valeria"))
 				.andExpect(jsonPath("$.registros.length()").value(1))
+				// El id del registro no cambia: es de lo que van a colgar los likes y los
+				// reportes de la Fase 3, y un like que sobrevive a una fusión es la razón por la
+				// que la mudanza es un update y no un borrar-y-crear.
+				.andExpect(jsonPath("$.registros[0].id").value(registro))
 				.andExpect(jsonPath("$.registros[0].produccion.id").value(canonica))
 				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("Un tranvía llamado deseo"))
 				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(true))
@@ -121,6 +138,36 @@ class FusionDeProduccionesTest {
 		mockMvc.perform(get("/api/producciones/" + duplicada)).andExpect(status().isOk());
 	}
 
+	/**
+	 * El "todo o nada" que promete D63, con el fallo puesto a mano en el peor lugar posible: entre
+	 * la mudanza de los registros y el borrado de la ficha. Lo que se verifica no es que Spring
+	 * sepa hacer rollback, sino que las dos escrituras —de dos módulos distintos— caen adentro de
+	 * la misma transacción y en ese orden. Si alguien le sacara el {@code @Transactional} al caso
+	 * de uso, o partiera la operación en dos, este test se cae con los registros mudados a una
+	 * ficha que sigue existiendo.
+	 */
+	@Test
+	void siFallaElBorradoNoQuedaNiMediaFusion() throws Exception {
+		Long duplicada = crearProduccion("Casa de muñecas (duplicada)");
+		Long canonica = crearProduccion("Casa de muñecas");
+		MockHttpSession sesion = cuenta("teresa");
+		Long registro = registrar(sesion, duplicada, "2024-07-07", 7, "Ojalá se caiga la fusión");
+		willThrow(new IllegalStateException("el borrado falla a propósito"))
+				.given(catalogo).borrar(duplicada);
+
+		assertThatThrownBy(() -> fusionar(duplicada, canonica))
+				.hasRootCauseMessage("el borrado falla a propósito");
+
+		mockMvc.perform(get("/api/usuarios/teresa"))
+				.andExpect(jsonPath("$.registros[0].id").value(registro))
+				.andExpect(jsonPath("$.registros[0].produccion.id").value(duplicada))
+				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("Casa de muñecas (duplicada)"))
+				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(true));
+		mockMvc.perform(get("/api/producciones/" + duplicada)).andExpect(status().isOk());
+		mockMvc.perform(get("/api/producciones/" + canonica + "/opiniones"))
+				.andExpect(jsonPath("$.cantidadRatings").value(0));
+	}
+
 	/** Fusionar es escribir el catálogo: solo admin (D7), y con token como toda escritura (D57). */
 	@Test
 	void fusionarEsCosaDeAdmin() throws Exception {
@@ -162,13 +209,15 @@ class FusionDeProduccionesTest {
 		return (MockHttpSession) resultado.getRequest().getSession(false);
 	}
 
-	private void registrar(MockHttpSession sesion, Long produccionId, String fecha, Integer rating,
+	private Long registrar(MockHttpSession sesion, Long produccionId, String fecha, Integer rating,
 			String resenia) throws Exception {
-		mockMvc.perform(json(post("/api/registros"), """
+		MvcResult resultado = mockMvc.perform(json(post("/api/registros"), """
 				{"produccionId":%d,"fecha":"%s","granularidad":"DIA","rating":%s,"resenia":%s}"""
 				.formatted(produccionId, fecha, rating, resenia == null ? "null" : "\"" + resenia + "\""))
 				.session(sesion))
-				.andExpect(status().isCreated());
+				.andExpect(status().isCreated())
+				.andReturn();
+		return id(resultado);
 	}
 
 	private static Long id(MvcResult resultado) throws Exception {
