@@ -83,7 +83,7 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 
 ## Estado actual
 
-**Fase 1 de 5 — el backend del catálogo.** Todavía no hay nada que puedas *usar*: hay una
+**Fase 2 de 5 — identidad y diario.** Todavía no hay nada que puedas *usar*: hay una
 API que responde.
 
 Lo que funciona hoy:
@@ -91,21 +91,23 @@ Lo que funciona hoy:
 - CRUD de **salas**, **personas** y **producciones** (con participaciones, roles y estados)
 - Endpoints públicos de lectura: ficha de producción, página de artista, página de sala,
   y "en cartel"
+- **Cuentas**: alta, login y logout con sesión en cookie HTTP-only. Escribir el catálogo
+  ahora pide rol de admin; leerlo sigue sin pedir nada
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| Login y cuentas (Spring Security) | Fase 2 |
 | El diario: registros, ratings, reseñas, estadísticas | Fase 2 |
 | Follow, feed y likes | Fase 3 |
 | **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
 
 La regla del roadmap es que las herramientas entran **cuando aparece su problema**, no por
-adelantado. Por eso hoy no hay Flyway (el esquema lo genera Hibernate con `ddl-auto: update`,
-D53) ni Spring Security (D52): sin datos de producción que proteger y sin login que
-implementar, serían ceremonia. Cada una tiene su condición de reentrada escrita.
+adelantado. Por eso todavía no hay Flyway: el esquema lo genera Hibernate con
+`ddl-auto: update` (D53) y sin una base de producción que proteger sería ceremonia; su
+condición de reentrada está escrita y es innegociable. Spring Security estuvo fuera del pom
+por el mismo criterio hasta que apareció su problema — el login — y volvió con él (D52/D56).
 
 Detalle completo en [docs/roadmap/ROADMAP.md](docs/roadmap/ROADMAP.md).
 
@@ -157,18 +159,50 @@ DB_PASSWORD=$(grep DB_PASSWORD ../.env | cut -d= -f2) ./mvnw spring-boot:run
 
 Queda escuchando en `http://localhost:8080`. Las tablas se crean solas al arrancar.
 
-```bash
-# crear una sala
-curl -X POST localhost:8080/api/admin/salas \
-  -H 'Content-Type: application/json' \
-  -d '{"nombre":"Sala Casacuberta","complejo":"Teatro San Martín"}'
+Leer el catálogo no pide nada (todo el contenido es público, D21):
 
-# ver qué hay en cartel
+```bash
 curl localhost:8080/api/en-cartel
 ```
 
-Ojo: `/api/admin/**` todavía **no tiene autenticación** — Spring Security entra en la
-Fase 2. No expongas esto a internet.
+Escribir sí. La sesión va en cookie y las escrituras piden token CSRF, así que con `curl`
+conviene usar un frasco de cookies. El token llega en la cookie `XSRF-TOKEN` y se devuelve
+en el header `X-XSRF-TOKEN`:
+
+```bash
+curl -s -c cookies.txt -o /dev/null localhost:8080/api/en-cartel   # trae el token
+token() { awk '$6=="XSRF-TOKEN"{print $7}' cookies.txt; }
+
+# crear una cuenta (queda logueada)
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"tuusuario","email":"vos@example.com","password":"unaClaveLarga"}' \
+  localhost:8080/api/auth/registro
+
+curl -b cookies.txt localhost:8080/api/auth/yo    # quién sos
+```
+
+El catálogo lo escribe solo el admin (D7) y no hay pantalla para repartir ese rol: se
+promueve a mano contra la base, una vez por entorno. Después hay que **volver a entrar**,
+porque la sesión ya abierta sigue con el rol viejo:
+
+```bash
+docker compose exec postgres psql -U teatro -d teatro \
+  -c "update usuario set rol='ADMIN' where username='tuusuario';"
+
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' \
+  -d '{"identificador":"tuusuario","password":"unaClaveLarga"}' \
+  localhost:8080/api/auth/login
+
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' \
+  -d '{"nombre":"Sala Casacuberta","complejo":"Teatro San Martín"}' \
+  localhost:8080/api/admin/salas
+```
+
+Ojo igual: esto corre sin HTTPS y la cookie de sesión todavía no es `secure`. Sigue sin ser
+algo para exponer a internet — el endurecimiento va con el deploy, en la Fase 5.
 
 Los secretos van siempre por variables de entorno; el `.env` está en `.gitignore` desde el
 primer commit y nunca hubo una credencial en el repo (D48).
