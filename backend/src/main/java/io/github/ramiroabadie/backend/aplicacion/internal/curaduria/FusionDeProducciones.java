@@ -19,6 +19,13 @@ import io.github.ramiroabadie.backend.diario.Diario;
  * <p>La ficha destino gana entera: no se mezclan sinopsis, sala, elenco ni estado. El admin deja
  * la canónica como quiere y recién ahí fusiona; adivinar cuál de los dos textos era el bueno es
  * exactamente el tipo de magia que arruina un catálogo curado a mano.</p>
+ *
+ * <p>Límite conocido y aceptado (R9): la transacción no coordina con quien esté registrando al
+ * mismo tiempo. Entre que se mudan los registros y se borra la ficha hay una ventana en la que
+ * otro request puede validar que la duplicada existe e insertar un registro apuntándole; ese
+ * registro se escapa de la mudanza y queda como los de D62 —legible, con su título, sin link—.
+ * Cerrarla pide bloqueos pesimistas coordinados entre los dos módulos: mucha maquinaria para una
+ * ventana de milisegundos con un solo admin fusionando una vez por semana.</p>
  */
 @Service
 class FusionDeProducciones {
