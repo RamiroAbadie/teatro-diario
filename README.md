@@ -93,12 +93,16 @@ Lo que funciona hoy:
   y "en cartel"
 - **Cuentas**: alta, login y logout con sesión en cookie HTTP-only. Escribir el catálogo
   ahora pide rol de admin; leerlo sigue sin pedir nada
+- **El diario**: registrar en un gesto (con fecha difusa y re-visto), editar y borrar lo
+  propio, y el perfil público con el historial y las estadísticas
+- **Promedio y reseñas** de cada producción, con el promedio de D20 —el último rating de
+  cada usuario— y no un `AVG()`
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| El diario: registros, ratings, reseñas, estadísticas | Fase 2 |
+| Búsqueda con `pg_trgm` sobre producciones, personas y usuarios | Fase 2 |
 | Follow, feed y likes | Fase 3 |
 | **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
@@ -200,6 +204,23 @@ curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
   -d '{"nombre":"Sala Casacuberta","complejo":"Teatro San Martín"}' \
   localhost:8080/api/admin/salas
 ```
+
+Con una producción cargada (`/api/admin/producciones`), el gesto de registro es un POST y
+lo demás se lee sin cuenta, como todo (D21):
+
+```bash
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' \
+  -d '{"produccionId":1,"fecha":"2026-07-12","granularidad":"DIA","rating":9,"resenia":"Salí flotando"}' \
+  localhost:8080/api/registros
+
+curl localhost:8080/api/usuarios/tuusuario        # tu diario y tus números
+curl localhost:8080/api/producciones/1/opiniones  # promedio y reseñas de esa ficha
+```
+
+La granularidad de la fecha es `DIA`, `MES`, `ANIO` o `SIN_FECHA`: es la que decide hasta
+dónde se lee la fecha que mandaste, así cargar algo que viste "en 2019" no necesita
+inventarle un día.
 
 Ojo igual: esto corre sin HTTPS y la cookie de sesión todavía no es `secure`. Sigue sin ser
 algo para exponer a internet — el endurecimiento va con el deploy, en la Fase 5.

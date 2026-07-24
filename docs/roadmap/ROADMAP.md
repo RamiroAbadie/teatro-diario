@@ -31,7 +31,10 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
 
 - ~~Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).~~ Hecho
   en D56/D57, con el candado de `/api/admin/**` y los primeros tests del proyecto.
-- El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats (HU-12/13/14).
+- ~~El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats
+  (HU-12/13/14).~~ Hecho, con los tres criterios que no eran obvios resueltos en
+  D58 (qué es el "último" rating), D59 (cómo se guarda la fecha difusa) y D60 (dónde
+  viven los controladores del diario y por qué no adentro del módulo).
 - Búsqueda pg_trgm (HU-07).
 
 ## Fase 3 — Social
