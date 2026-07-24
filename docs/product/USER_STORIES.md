@@ -1,6 +1,6 @@
 # User Stories — MVP
 
-> Estado: v1.0. Las historias del MVP congelado (D27 + D40), con criterios de aceptación
+> Estado: v1.1. Las historias del MVP congelado (D27 + D40 + D63), con criterios de aceptación
 > verificables. Cada historia es trazable a decisiones del log — **una historia que no
 > mapea a ninguna decisión es scope colándose y requiere decisión explícita antes de
 > implementarse.** Estas historias son la fuente de los issues de GitHub de las Fases 1-3.
@@ -76,7 +76,8 @@ la ficha del usuario sobre esa producción evidencia que la vio N veces.
 
 **HU-11 · Editar / borrar mi registro** — Como usuario quiero corregir o eliminar un
 registro propio.
-Criterios: solo el dueño (autorización en capa de aplicación, D30); borrar un registro
+Criterios: solo el dueño (quién sos lo resuelve la capa de aplicación; que el registro sea
+tuyo lo hace cumplir el módulo Diario — D61, que matiza a D30); borrar un registro
 recalcula el promedio si correspondía (D20); confirmación antes de borrar.
 
 **HU-12 · Ver mi diario** — Como usuario quiero ver mi historial completo.
@@ -127,7 +128,10 @@ en el menor tiempo posible (mi presupuesto es 15 min/ficha, D37/D38).
 Criterios: alta con todos los campos del modelo; participaciones con **buscar-o-crear
 persona inline** (D14) y múltiples roles por persona (D17); subida de afiche con
 redimensionado (D45); cambio de estado en un clic desde el listado (el barrido semanal
-de estados debe ser trivial); el flujo completo de una ficha típica toma ≤15 minutos.
+de estados debe ser trivial); el flujo completo de una ficha típica toma ≤15 minutos;
+**fusionar una ficha duplicada en la canónica** (D63): los registros de la duplicada
+—con su fecha, su puntaje y su reseña— pasan a la canónica y la duplicada se borra, todo
+o nada; la canónica conserva sus datos, no se mezcla nada.
 
 **HU-21 · Cola de sugerencias** — Como admin quiero aprobar o rechazar sugerencias (D24).
 Criterios: listado de pendientes; aprobar abre el formulario de HU-20 precargado con lo
@@ -151,6 +155,7 @@ desestimar reporte; ambas sacan el ítem de la cola.
 
 ## Cobertura
 
-Estas 22 historias cubren los 11 puntos de MVP_SCOPE.md + D40. Cualquier historia nueva
+Estas 22 historias cubren los 11 puntos de MVP_SCOPE.md + D40 + D63 (que amplía HU-20 con
+la fusión de duplicados, sin sumar historia nueva). Cualquier historia nueva
 que aparezca durante el desarrollo se contrasta primero contra el log: si no mapea a una
 decisión, es cambio de alcance (D27).

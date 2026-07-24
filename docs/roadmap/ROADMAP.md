@@ -31,7 +31,15 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
 
 - ~~Vuelve **Spring Security** (D52): registro, login con sesiones (HU-01/02).~~ Hecho
   en D56/D57, con el candado de `/api/admin/**` y los primeros tests del proyecto.
-- El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats (HU-12/13/14).
+- ~~El gesto de registro completo (HU-09/10/11), promedio D20, diario y stats
+  (HU-12/13/14).~~ Hecho **el backend**, que es lo único que esta fase puede cerrar:
+  registrar / editar / borrar, el promedio de D20, el diario ordenado, las stats y las
+  reseñas de la ficha, con tests de aceptación. Lo que a esas historias todavía les falta
+  no se construye acá: el autocompletado es HU-07 (el punto que sigue), la derivación a
+  sugerir es HU-08 y los likes que pide HU-14 son HU-17 — las dos, Fase 3 —, y la
+  confirmación de borrado y los estados vacíos son pantallas (Fase 4). Las historias se
+  cierran del todo cuando cierren sus fases; el backend ya no las bloquea.
+  Decisiones que hicieron falta: D58, D59, D60 y D61.
 - Búsqueda pg_trgm (HU-07).
 
 ## Fase 3 — Social
@@ -50,7 +58,8 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   antes de datos reales.
 - Descongelar Dockerfiles + Caddy + Compose completo (ya escritos, están en el repo).
   VPS, HTTPS, backups probados (D45).
-- Subida de afiches (lo único de HU-20 que quedó pendiente), panel admin pulido.
+- Lo que le queda a HU-20: subida de afiches, y las pantallas de lo que ya tiene backend
+  —entre ellas el botón de fusionar duplicados y su confirmación (D63)—. Panel admin pulido.
 - Carga de las ~50 fichas (D38) + beta cerrada con espectadores reales (métricas de
   MVP_SCOPE.md).
 

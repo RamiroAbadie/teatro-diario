@@ -29,7 +29,8 @@
 - **Autoridad sobre:** registros (con re-visto, D19), ratings, reseñas, el cálculo del
   promedio por producción (último rating por usuario, D20), estadísticas personales (D26).
 - **Expone:** crear/editar/borrar registro; diario de un usuario; actividad de un conjunto de
-  usuarios (insumo del feed); reseñas y promedio de una producción; stats propias.
+  usuarios (insumo del feed); reseñas y promedio de una producción; stats propias; reasignar
+  los registros de una producción a otra (la mitad que le toca en la fusión de duplicados, D63).
 - **Depende de:** **Catálogo** (validar que la producción existe; leer datos básicos para
   mostrar). Única dependencia módulo-a-módulo del sistema. Guarda `user_id` opaco.
 
@@ -47,8 +48,9 @@
 | Cosa | Dónde vive |
 |---|---|
 | **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios |
+| **Fusión de fichas duplicadas** (D63) | Mismo patrón: caso de uso de composición en la capa de aplicación. Diario muda los registros, Catálogo borra la ficha vacía, y las dos cosas pasan en una transacción. Ninguno de los dos módulos se entera del otro |
 | **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23). Módulo propio solo si algún día hay motor dedicado |
-| **Autorización** (admin, dueño-del-registro) | Concern transversal de la capa de aplicación |
+| **Autorización** | Partida en dos, y a propósito (D61). *Quién sos* y *si sos admin* son transversales: la capa de aplicación traduce la sesión a un `user_id` y sostiene el candado de `/api/admin/**`. *Si este dato es tuyo* lo hace cumplir el módulo dueño del dato, con el `user_id` que le pasan: Diario rechaza editar o borrar un registro ajeno |
 | **Notificaciones, emails** | No existen en el MVP |
 
 ## Grafo de dependencias (real, no estético)

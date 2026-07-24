@@ -71,6 +71,9 @@ historial — si lo frustra, no vuelve (R2).
        → Barrido de estados: listado de producciones `en cartel`
          → marcar `cerrada` en un clic (HU-20)
        → Altas de estrenos de la semana
+       → Duplicados que aparecieron al aprobar sugerencias: elegir la ficha canónica
+         → fusionar la otra en ella, con confirmación (HU-20 ampliada por D63)
+         [los registros de la duplicada se mudan solos; no hay nada que reconstruir]
 [presupuesto total: ≤ 3 horas]
 ```
 **Por qué importa:** si esta rutina no es rápida, el catálogo se pudre (R2). El panel

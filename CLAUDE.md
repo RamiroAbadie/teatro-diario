@@ -61,6 +61,10 @@ Web app. Un solo desarrollador. Toda la documentación fundacional vive en `docs
   Las capas dentro de cada módulo son las clásicas: entidad / repository (solo interface,
   Spring Data genera la impl) / service / controller / DTOs como records, bajo
   `<modulo>/internal/`. Lo público del módulo va en la raíz del paquete del módulo.
+  Excepción registrada (D60): un controlador que necesita datos de dos módulos —traducir
+  la sesión a un `usuarioId`, ponerle nombre a un id opaco— va en la capa de aplicación,
+  porque los módulos no pueden depender entre sí para conseguirlos. Es el caso de los
+  endpoints del diario. La regla que manda es el grafo de dependencias, no la carpeta.
 
 ## Definición de "hecho"
 
