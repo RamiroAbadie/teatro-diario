@@ -128,7 +128,10 @@ en el menor tiempo posible (mi presupuesto es 15 min/ficha, D37/D38).
 Criterios: alta con todos los campos del modelo; participaciones con **buscar-o-crear
 persona inline** (D14) y múltiples roles por persona (D17); subida de afiche con
 redimensionado (D45); cambio de estado en un clic desde el listado (el barrido semanal
-de estados debe ser trivial); el flujo completo de una ficha típica toma ≤15 minutos.
+de estados debe ser trivial); el flujo completo de una ficha típica toma ≤15 minutos;
+**fusionar una ficha duplicada en la canónica** (D63): los registros de la duplicada
+—con su fecha, su puntaje y su reseña— pasan a la canónica y la duplicada se borra, todo
+o nada; la canónica conserva sus datos, no se mezcla nada.
 
 **HU-21 · Cola de sugerencias** — Como admin quiero aprobar o rechazar sugerencias (D24).
 Criterios: listado de pendientes; aprobar abre el formulario de HU-20 precargado con lo
