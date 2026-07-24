@@ -22,12 +22,14 @@ import io.github.ramiroabadie.backend.diario.GranularidadFecha;
  * <p>{@code usuarioId} y {@code produccionId} son ids opacos, sin clave foránea (D30): el
  * usuario es de Identidad y la producción de Catálogo, y una FK sería una tabla de otro módulo
  * metiéndose en el esquema de este. La contra es que borrar una producción deja registros
- * apuntando a la nada; el diario los muestra igual, sin título, porque el registro es de la
- * persona.</p>
+ * apuntando a la nada, y por eso el registro guarda además una copia del título (D62): el
+ * historial es de la persona y tiene que seguir diciendo qué vio aunque el catálogo cambie de
+ * opinión. La copia es un respaldo, no la verdad — mientras la ficha exista, el título que se
+ * muestra es el suyo.</p>
  *
  * <p>La fecha viene normalizada al comienzo de su período y {@code granularidad} dice hasta
- * dónde leerla (MD-1). Guardarla así hace que el orden del diario sea un {@code ORDER BY} y no
- * un cálculo (MD-2), y que el "último rating" de D20 se pueda decidir en la base.</p>
+ * dónde leerla (MD-1). Guardarla así hace que el "último rating" de D20 se pueda decidir en la
+ * base; el orden del diario (MD-2) necesita además la precisión y se arma en el servicio.</p>
  */
 @Entity
 @Table(name = "registro", indexes = {
@@ -45,6 +47,16 @@ class Registro {
 
 	@Column(name = "produccion_id", nullable = false)
 	private Long produccionId;
+
+	/**
+	 * Copia del título al momento de registrar, para que el historial sobreviva al borrado de la
+	 * ficha (D62). Sin {@code nullable = false} a propósito: mientras el esquema lo genere
+	 * Hibernate con {@code ddl-auto: update} (D53), una columna obligatoria nueva no puede
+	 * agregarse a una tabla que ya tiene filas. Cuando entre Flyway (Fase 5) el baseline la
+	 * puede endurecer.
+	 */
+	@Column(name = "titulo_produccion")
+	private String tituloProduccion;
 
 	/** Nula cuando no se acuerda cuándo fue (MD-1); las demás granularidades la exigen. */
 	private LocalDate fecha;
@@ -66,17 +78,18 @@ class Registro {
 		// requerido por JPA
 	}
 
-	Registro(Long usuarioId, Long produccionId, LocalDate fecha, GranularidadFecha granularidad,
-			Integer rating, String resenia) {
+	Registro(Long usuarioId, Long produccionId, String tituloProduccion, LocalDate fecha,
+			GranularidadFecha granularidad, Integer rating, String resenia) {
 		this.usuarioId = usuarioId;
 		this.creadoEn = Instant.now();
-		actualizar(produccionId, fecha, granularidad, rating, resenia);
+		actualizar(produccionId, tituloProduccion, fecha, granularidad, rating, resenia);
 	}
 
 	/** Editar es reemplazar el gesto entero, producción incluida (HU-11). */
-	final void actualizar(Long produccionId, LocalDate fecha, GranularidadFecha granularidad,
-			Integer rating, String resenia) {
+	final void actualizar(Long produccionId, String tituloProduccion, LocalDate fecha,
+			GranularidadFecha granularidad, Integer rating, String resenia) {
 		this.produccionId = produccionId;
+		this.tituloProduccion = tituloProduccion;
 		this.fecha = fecha;
 		this.granularidad = granularidad;
 		this.rating = rating;
@@ -97,6 +110,10 @@ class Registro {
 
 	Long getProduccionId() {
 		return produccionId;
+	}
+
+	String getTituloProduccion() {
+		return tituloProduccion;
 	}
 
 	LocalDate getFecha() {

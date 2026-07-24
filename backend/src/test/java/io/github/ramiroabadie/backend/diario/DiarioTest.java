@@ -210,6 +210,33 @@ class DiarioTest {
 				.andExpect(jsonPath("$.sinFecha[0].fecha").isEmpty());
 	}
 
+	/**
+	 * MD-2 en el caso borde que la normalización de D59 provoca: una fecha exacta que cae justo
+	 * en el comienzo de un período difuso queda guardada con la misma fecha que él. El 1 de enero
+	 * de 2023 y "2023" a secas son los dos el 2023-01-01, y el orden no lo puede decidir la fecha
+	 * sola — lo decide la precisión: primero el día exacto, después el mes, después el año.
+	 */
+	@Test
+	void unaFechaExactaLeGanaAlPeriodoDifusoQueEmpiezaElMismoDia() throws Exception {
+		Long primeroDeEnero = crearProduccion("La del 1 de enero");
+		Long todoElAnio = crearProduccion("La de algún momento de 2023");
+		Long primeroDeJunio = crearProduccion("La del 1 de junio");
+		Long todoJunio = crearProduccion("La de algún día de junio");
+		MockHttpSession sesion = cuenta("celeste");
+
+		// Cargadas al revés a propósito: si el desempate fuera por orden de carga, saldrían mal.
+		registrar(sesion, primeroDeJunio, "2023-06-01", "DIA", null, null);
+		registrar(sesion, todoJunio, "2023-06-30", "MES", null, null);
+		registrar(sesion, primeroDeEnero, "2023-01-01", "DIA", null, null);
+		registrar(sesion, todoElAnio, "2023-08-08", "ANIO", null, null);
+
+		mockMvc.perform(get("/api/usuarios/celeste"))
+				.andExpect(jsonPath("$.registros[0].produccion.id").value(primeroDeJunio))
+				.andExpect(jsonPath("$.registros[1].produccion.id").value(todoJunio))
+				.andExpect(jsonPath("$.registros[2].produccion.id").value(primeroDeEnero))
+				.andExpect(jsonPath("$.registros[3].produccion.id").value(todoElAnio));
+	}
+
 	/** HU-13 y D26: los números son solo sobre registros propios. */
 	@Test
 	void lasEstadisticasSonSoloDeLoPropio() throws Exception {
@@ -314,14 +341,18 @@ class DiarioTest {
 	}
 
 	/**
-	 * El registro es de la persona, no del catálogo: si el admin borra la ficha, la línea del
-	 * diario sigue estando (sin título, porque ya no hay a qué linkear).
+	 * El registro es de la persona, no del catálogo (D62): si el admin borra la ficha —cosa que
+	 * necesita poder hacer para fusionar duplicados—, la línea del diario sigue diciendo qué se
+	 * vio. Lo único que se pierde es el link, y la respuesta lo avisa.
 	 */
 	@Test
-	void borrarLaProduccionNoBorraElRegistroDeNadie() throws Exception {
+	void borrarLaProduccionNoLeBorraElHistorialANadie() throws Exception {
 		Long produccion = crearProduccion("La que se va a borrar");
 		MockHttpSession sesion = cuenta("gustavo");
 		registrar(sesion, produccion, "2024-02-02", "DIA", 7, null);
+
+		mockMvc.perform(get("/api/usuarios/gustavo"))
+				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(true));
 
 		mockMvc.perform(conCsrf(delete("/api/admin/producciones/" + produccion))
 				.with(user("jefa").roles("ADMIN")))
@@ -329,8 +360,26 @@ class DiarioTest {
 
 		mockMvc.perform(get("/api/usuarios/gustavo"))
 				.andExpect(jsonPath("$.registros.length()").value(1))
-				.andExpect(jsonPath("$.registros[0].produccion").isEmpty())
+				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("La que se va a borrar"))
+				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(false))
 				.andExpect(jsonPath("$.registros[0].rating").value(7));
+	}
+
+	/** La copia del título es un respaldo, no la verdad: si el admin corrige la ficha, gana la ficha. */
+	@Test
+	void corregirElTituloDeLaFichaSeVeEnLosDiariosQueYaLaTenian() throws Exception {
+		Long produccion = crearProduccion("Traspié en el título");
+		MockHttpSession sesion = cuenta("renata");
+		registrar(sesion, produccion, "2024-09-09", "DIA", null, null);
+
+		mockMvc.perform(json(put("/api/admin/producciones/" + produccion), """
+				{"titulo":"Título como corresponde","estado":"EN_CARTEL"}""")
+				.with(user("jefa").roles("ADMIN")))
+				.andExpect(status().isOk());
+
+		mockMvc.perform(get("/api/usuarios/renata"))
+				.andExpect(jsonPath("$.registros[0].produccion.titulo").value("Título como corresponde"))
+				.andExpect(jsonPath("$.registros[0].produccion.enCatalogo").value(true));
 	}
 
 	private Long crearProduccion(String titulo) throws Exception {

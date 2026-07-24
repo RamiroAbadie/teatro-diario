@@ -14,14 +14,17 @@ import org.springframework.data.repository.query.Param;
 interface RegistroRepository extends JpaRepository<Registro, Long> {
 
 	/**
-	 * El diario, cronológico descendente (HU-12). Como la fecha se guarda al comienzo de su
-	 * período, un "2023" a secas cae después de todos los días exactos de 2023, que es lo que
-	 * pide MD-2. El desempate por creación deja arriba lo último cargado.
+	 * El diario (HU-12). Sin {@code order by}: el orden que pide MD-2 no lo puede expresar esta
+	 * consulta. Como la fecha se guarda al comienzo de su período (D59), el 1 de enero de 2023 y
+	 * "2023" a secas son los dos el 2023-01-01, y ahí desempata la precisión de la granularidad
+	 * —primero el día exacto, después el mes, después el año—, que guardada como texto ordena
+	 * alfabéticamente ('ANIO' antes que 'DIA') y no sirve. El orden vive en el servicio, que es
+	 * donde se puede escribir la regla completa y leerla de un vistazo.
 	 */
-	List<Registro> findByUsuarioIdAndFechaIsNotNullOrderByFechaDescCreadoEnDesc(Long usuarioId);
+	List<Registro> findByUsuarioIdAndFechaIsNotNull(Long usuarioId);
 
 	/** La sección de los sin fecha, que va aparte al final (MD-2). */
-	List<Registro> findByUsuarioIdAndFechaIsNullOrderByCreadoEnDesc(Long usuarioId);
+	List<Registro> findByUsuarioIdAndFechaIsNull(Long usuarioId);
 
 	/** Las reseñas de la ficha (HU-14): las más nuevas primero. */
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);

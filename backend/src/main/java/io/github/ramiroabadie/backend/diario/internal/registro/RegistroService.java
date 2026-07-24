@@ -3,6 +3,7 @@ package io.github.ramiroabadie.backend.diario.internal.registro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -23,6 +24,7 @@ import io.github.ramiroabadie.backend.diario.NuevoRegistro;
 import io.github.ramiroabadie.backend.diario.ObrasPorAnio;
 import io.github.ramiroabadie.backend.diario.OpinionesDeProduccion;
 import io.github.ramiroabadie.backend.diario.ProduccionInexistenteException;
+import io.github.ramiroabadie.backend.diario.ProduccionRegistrada;
 import io.github.ramiroabadie.backend.diario.RegistroAjenoException;
 import io.github.ramiroabadie.backend.diario.RegistroDeDiario;
 import io.github.ramiroabadie.backend.diario.RegistroInvalidoException;
@@ -45,6 +47,20 @@ class RegistroService implements Diario {
 	/** Lo que entra en la columna. Una reseña de teatro larguísima sigue entrando cómoda. */
 	private static final int MAXIMO_CARACTERES_RESENIA = 5000;
 
+	/**
+	 * El orden del diario (MD-2), completo: fecha más nueva primero; a igual fecha, la más
+	 * precisa primero —el 1 de enero de 2023 antes que "2023" a secas, que empiezan el mismo día
+	 * después de normalizar (D59)—; y recién ahí desempata la carga más reciente.
+	 */
+	private static final Comparator<Registro> ORDEN_DEL_DIARIO = Comparator
+			.comparing(Registro::getFecha, Comparator.reverseOrder())
+			.thenComparing(registro -> precision(registro.getGranularidad()), Comparator.reverseOrder())
+			.thenComparing(Registro::getCreadoEn, Comparator.reverseOrder());
+
+	/** Los sin fecha no tienen por dónde ordenarse más que por cuándo se cargaron. */
+	private static final Comparator<Registro> ORDEN_SIN_FECHA =
+			Comparator.comparing(Registro::getCreadoEn, Comparator.reverseOrder());
+
 	private final RegistroRepository repositorio;
 
 	private final CatalogoProducciones catalogo;
@@ -58,8 +74,9 @@ class RegistroService implements Diario {
 	@Transactional
 	public RegistroDeDiario registrar(Long usuarioId, NuevoRegistro nuevo) {
 		ProduccionBasica produccion = produccionDe(nuevo.produccionId());
-		Registro registro = new Registro(usuarioId, produccion.id(), fechaNormalizada(nuevo),
-				nuevo.granularidad(), ratingValidado(nuevo.rating()), textoLimpio(nuevo.resenia()));
+		Registro registro = new Registro(usuarioId, produccion.id(), produccion.titulo(),
+				fechaNormalizada(nuevo), nuevo.granularidad(), ratingValidado(nuevo.rating()),
+				textoLimpio(nuevo.resenia()));
 		return describir(repositorio.save(registro), produccion);
 	}
 
@@ -68,8 +85,8 @@ class RegistroService implements Diario {
 	public RegistroDeDiario editar(Long usuarioId, Long registroId, NuevoRegistro cambios) {
 		Registro registro = propio(usuarioId, registroId);
 		ProduccionBasica produccion = produccionDe(cambios.produccionId());
-		registro.actualizar(produccion.id(), fechaNormalizada(cambios), cambios.granularidad(),
-				ratingValidado(cambios.rating()), textoLimpio(cambios.resenia()));
+		registro.actualizar(produccion.id(), produccion.titulo(), fechaNormalizada(cambios),
+				cambios.granularidad(), ratingValidado(cambios.rating()), textoLimpio(cambios.resenia()));
 		return describir(registro, produccion);
 	}
 
@@ -86,8 +103,10 @@ class RegistroService implements Diario {
 	@Override
 	@Transactional(readOnly = true)
 	public DiarioDeUsuario deUsuario(Long usuarioId) {
-		List<Registro> conFecha = repositorio.findByUsuarioIdAndFechaIsNotNullOrderByFechaDescCreadoEnDesc(usuarioId);
-		List<Registro> sinFecha = repositorio.findByUsuarioIdAndFechaIsNullOrderByCreadoEnDesc(usuarioId);
+		List<Registro> conFecha = repositorio.findByUsuarioIdAndFechaIsNotNull(usuarioId).stream()
+				.sorted(ORDEN_DEL_DIARIO).toList();
+		List<Registro> sinFecha = repositorio.findByUsuarioIdAndFechaIsNull(usuarioId).stream()
+				.sorted(ORDEN_SIN_FECHA).toList();
 		Map<Long, ProduccionBasica> producciones = catalogo.porIds(
 				todos(conFecha, sinFecha).map(Registro::getProduccionId).distinct().toList());
 		return new DiarioDeUsuario(describir(conFecha, producciones), describir(sinFecha, producciones),
@@ -133,6 +152,20 @@ class RegistroService implements Diario {
 			throw new RegistroInvalidoException("fecha", "Esa función todavía no pasó");
 		}
 		return comienzo;
+	}
+
+	/**
+	 * Cuánto dice una granularidad, de más a menos. Escrito a mano y no con el {@code ordinal()}
+	 * del enum: que el orden del diario dependa de en qué renglón está declarada cada constante
+	 * es una trampa esperando a que alguien las reordene.
+	 */
+	private static int precision(GranularidadFecha granularidad) {
+		return switch (granularidad) {
+			case DIA -> 3;
+			case MES -> 2;
+			case ANIO -> 1;
+			case SIN_FECHA -> 0;
+		};
 	}
 
 	private Integer ratingValidado(Integer rating) {
@@ -200,8 +233,16 @@ class RegistroService implements Diario {
 				.toList();
 	}
 
+	/**
+	 * El título vivo del catálogo le gana a la copia del registro: si el admin corrige una ficha,
+	 * la corrección se ve en todos los diarios. La copia entra recién cuando la ficha ya no está
+	 * (D62), y ahí {@code enCatalogo} avisa que ese link no lleva a ningún lado.
+	 */
 	private RegistroDeDiario describir(Registro registro, ProduccionBasica produccion) {
-		return new RegistroDeDiario(registro.getId(), produccion, registro.getFecha(),
+		ProduccionRegistrada vista = new ProduccionRegistrada(registro.getProduccionId(),
+				produccion == null ? registro.getTituloProduccion() : produccion.titulo(),
+				produccion != null);
+		return new RegistroDeDiario(registro.getId(), vista, registro.getFecha(),
 				registro.getGranularidad(), registro.getRating(), registro.getResenia(), registro.getCreadoEn());
 	}
 
