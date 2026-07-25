@@ -10,6 +10,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -42,6 +43,10 @@ class SocialTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	/** Solo para fabricar la colisión de instantes que la API no deja provocar a mano. */
+	@Autowired
+	private JdbcTemplate jdbc;
 
 	/** HU-15: el botón, los dos contadores y la vuelta atrás. Sin aprobación de por medio (D21). */
 	@Test
@@ -155,6 +160,56 @@ class SocialTest {
 		mockMvc.perform(get("/api/feed").session(ariel))
 				.andExpect(jsonPath("$.global").value(false))
 				.andExpect(jsonPath("$.items.length()").value(1));
+	}
+
+	/**
+	 * El otro lado de la regla del fallback (D22/D66): seguir gente que no registró nada da un
+	 * feed vacío, no el global. Un feed sin nada de los tuyos es información honesta; rellenarlo
+	 * con desconocidos sin avisar sería mentir sobre de quién es lo que se lee.
+	 */
+	@Test
+	void seguirGenteCalladaDaUnFeedVacioYNoElGlobal() throws Exception {
+		MockHttpSession bruno = cuenta("brunilda");
+		cuenta("delia");
+		registrar(cuenta("emilse"), crearProduccion("La que registró una desconocida"), 6, null);
+
+		seguir(bruno, "delia");
+
+		mockMvc.perform(get("/api/feed").session(bruno))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.global").value(false))
+				.andExpect(jsonPath("$.items").isEmpty())
+				.andExpect(jsonPath("$.siguienteCursor").isEmpty());
+	}
+
+	/**
+	 * Por qué el cursor lleva el id además del instante (D66): dos registros pueden compartir la
+	 * fecha de carga, y con un corte por instante solo el segundo se perdería para siempre —la
+	 * página siguiente pide lo anterior a ese instante, y él no lo es—.
+	 *
+	 * <p>El empate se fuerza con un {@code UPDATE}: la carga la sella el propio registro con la
+	 * hora del momento, así que por HTTP no hay forma de provocar una colisión de microsegundos
+	 * a pedido. Es la condición que la base sí puede producir sola, escrita a mano.</p>
+	 */
+	@Test
+	void dosRegistrosCargadosEnElMismoInstanteNoSePisanAlPaginar() throws Exception {
+		MockHttpSession noelia = cuenta("noelia");
+		MockHttpSession benito = cuenta("benito");
+		Long primero = registrar(benito, crearProduccion("La empatada de abajo"), null, null);
+		Long segundo = registrar(benito, crearProduccion("La empatada de arriba"), null, null);
+		jdbc.update("update registro set creado_en = (select creado_en from registro where id = ?) "
+				+ "where id = ?", primero, segundo);
+		seguir(noelia, "benito");
+
+		MvcResult pagina = mockMvc.perform(get("/api/feed").param("tamanio", "1").session(noelia))
+				.andExpect(jsonPath("$.items.length()").value(1))
+				.andExpect(jsonPath("$.items[0].registroId").value(segundo))
+				.andReturn();
+		String cursor = JsonPath.read(pagina.getResponse().getContentAsString(), "$.siguienteCursor");
+
+		mockMvc.perform(get("/api/feed").param("tamanio", "1").param("cursor", cursor).session(noelia))
+				.andExpect(jsonPath("$.items.length()").value(1))
+				.andExpect(jsonPath("$.items[0].registroId").value(primero));
 	}
 
 	/**

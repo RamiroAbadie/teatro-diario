@@ -1,8 +1,5 @@
 package io.github.ramiroabadie.backend.aplicacion.internal.social;
 
-import java.util.List;
-import java.util.Map;
-
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
@@ -14,18 +11,12 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ramiroabadie.backend.aplicacion.internal.SesionActual;
-import io.github.ramiroabadie.backend.diario.ActividadDeDiario;
-import io.github.ramiroabadie.backend.diario.CursorDeActividad;
-import io.github.ramiroabadie.backend.diario.Diario;
-import io.github.ramiroabadie.backend.identidad.UsuarioPublico;
-import io.github.ramiroabadie.backend.identidad.Usuarios;
-import io.github.ramiroabadie.backend.social.GrafoSocial;
 
 /**
- * El feed de la home logueada (HU-16). Es la composición que anuncia D29 y el motivo por el que
- * el feed no es un módulo ni una tabla materializada: Social dice a quiénes sigo, Diario qué
- * registraron, Identidad cómo se llaman. Ninguno de los tres conoce a los otros y acá no se
- * guarda nada — el feed se arma al leer, con tres consultas.
+ * La cara HTTP del feed (HU-16). El caso de uso —la composición de los tres módulos y la regla
+ * del fallback global— vive en {@link ArmadoDelFeed}; acá solo pasa lo que es del protocolo:
+ * quién está logueado, hasta dónde llegó la página anterior y cuántos ítems entran en la que
+ * sigue (D34).
  *
  * <p>Es el único {@code GET} de la API que pide sesión, además de {@code /api/auth/yo}: el resto
  * del contenido se lee sin cuenta (D21), pero "lo que registraron los que sigo" no existe sin un
@@ -40,47 +31,21 @@ class FeedController {
 	/** Techo del tamaño de página: el feed es para scrollear, no para bajarse la plataforma. */
 	private static final int TAMANIO_MAXIMO = 50;
 
-	private final GrafoSocial grafo;
-
-	private final Diario diario;
-
-	private final Usuarios usuarios;
+	private final ArmadoDelFeed feed;
 
 	private final SesionActual sesion;
 
-	FeedController(GrafoSocial grafo, Diario diario, Usuarios usuarios, SesionActual sesion) {
-		this.grafo = grafo;
-		this.diario = diario;
-		this.usuarios = usuarios;
+	FeedController(ArmadoDelFeed feed, SesionActual sesion) {
+		this.feed = feed;
 		this.sesion = sesion;
 	}
 
-	/**
-	 * El fallback global es para quien no sigue a nadie, no para quien sigue gente callada (D22):
-	 * un feed vacío con seguidos es información honesta —los tuyos no registraron nada—, y
-	 * rellenarlo con desconocidos sería mentir sobre de quién es lo que se está leyendo.
-	 */
 	@GetMapping("/api/feed")
 	public FeedResponse feed(@RequestParam(required = false) String cursor,
 			@RequestParam(defaultValue = "" + TAMANIO_POR_DEFECTO) int tamanio,
 			Authentication autenticado) {
-		Long yo = sesion.id(autenticado);
-		int limite = Math.clamp(tamanio, 1, TAMANIO_MAXIMO);
-		CursorDeActividad desde = CursorDelFeed.decodificar(cursor);
-		List<Long> seguidos = grafo.seguidosPor(yo);
-		boolean global = seguidos.isEmpty();
-		List<ActividadDeDiario> actividad = global
-				? diario.actividadGlobal(desde, limite)
-				: diario.actividadDe(seguidos, desde, limite);
-		return FeedResponse.desde(global, actividad, autores(actividad), limite);
-	}
-
-	/** Los nombres de la página entera en una sola consulta, como las firmas de las reseñas. */
-	private Map<Long, UsuarioPublico> autores(List<ActividadDeDiario> actividad) {
-		return usuarios.porIds(actividad.stream()
-				.map(ActividadDeDiario::usuarioId)
-				.distinct()
-				.toList());
+		return feed.pagina(sesion.id(autenticado), CursorDelFeed.decodificar(cursor),
+				Math.clamp(tamanio, 1, TAMANIO_MAXIMO));
 	}
 
 	@ExceptionHandler(CursorInvalidoException.class)
