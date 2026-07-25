@@ -19,7 +19,11 @@
 - **Autoridad sobre:** producciones, personas, participaciones, salas, estados. Es el único
   módulo que decide la **identidad** de las entidades (¿dos Hamlets son la misma producción?).
 - **Expone:** fichas, "en cartel", búsqueda de producciones/personas, escrituras solo-admin,
-  recepción de sugerencias (guarda el `user_id` del sugerente como referencia opaca).
+  recepción de sugerencias (guarda el `user_id` del sugerente como referencia opaca) y la cola
+  de las que faltan resolver. Implementado así en la Fase 3 (D69): el módulo guarda y ordena la
+  cola, pero los dos controladores son de la capa de aplicación —uno traduce la sesión a un
+  `usuarioId`, el otro le pone nombre al id del sugerente—, y aprobar no crea la ficha: la
+  crea el panel con el formulario de HU-20 y la aprobación anota en cuál terminó.
 - **Depende de:** nadie. (El chequeo "es admin" es autorización: concern transversal de la
   capa de aplicación, no una dependencia hacia Identidad.)
 - **Nota de diseño:** la curaduría vive adentro y no como módulo "Admin" separado — es la

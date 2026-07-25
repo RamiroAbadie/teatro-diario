@@ -59,8 +59,12 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   con esto tiene todo lo que HU-14 pedía, y también el feed—. Social suma su segunda capacidad
   sin enterarse de qué es una reseña. Decisión que hizo falta: D68, que además amplía D66 (el
   feed pasa a siete consultas).
-- Sugerencias: el formulario del usuario (HU-08) y la cola del admin (HU-21). Es también
-  lo que le falta a HU-07 para que el resultado vacío tenga adónde derivar.
+- ~~Sugerencias: el formulario del usuario (HU-08) y la cola del admin (HU-21).~~ Hecho: la
+  válvula del catálogo cerrado (D7/D24). El formulario pide una sola cosa —el título— y la
+  cola del admin se vacía por dos puertas: aprobar, con la ficha que ya cargó el formulario
+  de HU-20, o rechazar con un motivo que lee solo él. Con esto **HU-07 no tiene nada más que
+  esperar del backend**: el resultado vacío ya tiene adónde derivar, y lo que queda es la
+  pantalla (Fase 4). Decisión que hizo falta: D69.
 - Reportes: el botón (HU-18) y la cola del admin (HU-22).
 
 ## Fase 4 — Frontend
