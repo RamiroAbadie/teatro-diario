@@ -77,4 +77,16 @@ public interface Diario {
 
 	/** Promedio (D20) y reseñas de una producción, para la ficha (HU-14). */
 	OpinionesDeProduccion opinionesDe(Long produccionId);
+
+	/**
+	 * Si ese registro es una reseña: existe y tiene texto. Lo pregunta la capa de aplicación antes
+	 * de dejar que alguien le dé like (HU-17), y no es la misma situación que seguir a alguien
+	 * (D67): ahí los dos ids se resolvieron para llegar hasta el caso de uso, y acá el id llega
+	 * crudo de la URL, así que sin este chequeo se guardarían likes a números inventados.
+	 *
+	 * <p>Devuelve un booleano y no la reseña porque es lo único que se pregunta. Un registro sin
+	 * texto —solo puntaje— no es una reseña y no se puede destacar: lo que HU-17 destaca es lo que
+	 * alguien escribió.</p>
+	 */
+	boolean existeResenia(Long registroId);
 }

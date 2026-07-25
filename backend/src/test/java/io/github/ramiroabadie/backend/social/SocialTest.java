@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Los criterios de aceptación de HU-15 y HU-16, ejecutables. El que vigila la regla difícil es
- * {@link #elFeedTraeLoDeLosSeguidosYNadaMas()}: el feed es una composición de tres módulos que no
+ * Los criterios de aceptación de HU-15, HU-16 y HU-17, ejecutables. El que vigila la regla difícil
+ * es {@link #elFeedTraeLoDeLosSeguidosYNadaMas()}: el feed es una composición de tres módulos que no
  * se conocen (D29), y la primera "optimización" que se le ocurre a cualquiera —una tabla de feed,
  * o un join entre registros y seguimientos— rompe el límite que sostiene toda la arquitectura.
  *
@@ -261,6 +261,97 @@ class SocialTest {
 				.andExpect(status().isUnauthorized());
 		mockMvc.perform(conCsrf(post("/api/usuarios/nadie-con-ese-nombre/seguir")).session(ramona))
 				.andExpect(status().isNotFound());
+	}
+
+	/**
+	 * HU-17 y lo que a HU-14 le faltaba en la ficha: el toggle, el contador y el estado del botón.
+	 * El contador se ve sin cuenta, como todo (D21); el botón no, porque sin sesión no hay quién lo
+	 * toque, y eso es lo que distingue {@code leDiLike} nulo de {@code false}.
+	 */
+	@Test
+	void elLikeEsUnToggleConContadorEnLaFicha() throws Exception {
+		Long produccion = crearProduccion("La que se llenó de likes");
+		MockHttpSession alma = cuenta("alma");
+		MockHttpSession corina = cuenta("corina");
+		Long resenia = registrar(alma, produccion, 9, "Hora y media que se pasa volando");
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.resenias[0].likes").value(0))
+				.andExpect(jsonPath("$.resenias[0].leDiLike").isEmpty());
+
+		// El doble clic es lo normal, no un error: el segundo like no suma otro.
+		darLike(corina, resenia);
+		darLike(corina, resenia);
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(corina))
+				.andExpect(jsonPath("$.resenias[0].likes").value(1))
+				.andExpect(jsonPath("$.resenias[0].leDiLike").value(true));
+		// Quien no lo dio ve el mismo contador con el botón apagado.
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(alma))
+				.andExpect(jsonPath("$.resenias[0].likes").value(1))
+				.andExpect(jsonPath("$.resenias[0].leDiLike").value(false));
+
+		// Darse like a la propia reseña está permitido: no es seguirse a uno mismo, es un número.
+		darLike(alma, resenia);
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(alma))
+				.andExpect(jsonPath("$.resenias[0].likes").value(2))
+				.andExpect(jsonPath("$.resenias[0].leDiLike").value(true));
+
+		mockMvc.perform(conCsrf(delete("/api/resenias/" + resenia + "/like")).session(corina))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(conCsrf(delete("/api/resenias/" + resenia + "/like")).session(corina))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(corina))
+				.andExpect(jsonPath("$.resenias[0].likes").value(1))
+				.andExpect(jsonPath("$.resenias[0].leDiLike").value(false));
+	}
+
+	/**
+	 * Los likes también viajan en el feed, que es donde más se leen reseñas (HU-16 + HU-17). Un
+	 * registro sin texto no es una reseña: viaja igual en el feed, pero sin botón —{@code leDiLike}
+	 * nulo— y no se le puede dar like ni a mano.
+	 */
+	@Test
+	void elLikeViajaEnElFeedYSoloSobreLoQueEsResenia() throws Exception {
+		MockHttpSession genaro = cuenta("genaro");
+		MockHttpSession hebe = cuenta("hebe");
+		Long conTexto = registrar(hebe, crearProduccion("La que Hebe reseñó"), 8, "Salí pensando");
+		Long sinTexto = registrar(hebe, crearProduccion("La que Hebe solo puntuó"), 7, null);
+		seguir(genaro, "hebe");
+		darLike(genaro, conTexto);
+
+		mockMvc.perform(get("/api/feed").session(genaro))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.items[0].registroId").value(sinTexto))
+				.andExpect(jsonPath("$.items[0].likes").value(0))
+				.andExpect(jsonPath("$.items[0].leDiLike").isEmpty())
+				.andExpect(jsonPath("$.items[1].registroId").value(conTexto))
+				.andExpect(jsonPath("$.items[1].likes").value(1))
+				.andExpect(jsonPath("$.items[1].leDiLike").value(true));
+
+		mockMvc.perform(conCsrf(post("/api/resenias/" + sinTexto + "/like")).session(genaro))
+				.andExpect(status().isNotFound());
+	}
+
+	/** Destacar es de quien tiene cuenta, y lo que no es una reseña no está: 404 en los dos sentidos. */
+	@Test
+	void elLikePideSesionYUnaReseniaQueExista() throws Exception {
+		MockHttpSession ignacio = cuenta("ignacio");
+		Long resenia = registrar(ignacio, crearProduccion("La de la sala chica"), null, "Corta e intensa");
+
+		mockMvc.perform(conCsrf(post("/api/resenias/" + resenia + "/like")))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(conCsrf(post("/api/resenias/999999/like")).session(ignacio))
+				.andExpect(status().isNotFound());
+		mockMvc.perform(conCsrf(delete("/api/resenias/999999/like")).session(ignacio))
+				.andExpect(status().isNotFound());
+	}
+
+	private void darLike(MockHttpSession sesion, Long reseniaId) throws Exception {
+		mockMvc.perform(conCsrf(post("/api/resenias/" + reseniaId + "/like")).session(sesion))
+				.andExpect(status().isNoContent());
 	}
 
 	private void seguir(MockHttpSession sesion, String username) throws Exception {

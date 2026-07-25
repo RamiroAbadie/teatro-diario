@@ -8,8 +8,8 @@ import java.time.LocalDate;
  * persona vio la obra. El autor viene como {@code usuarioId} opaco (D30) — el username lo pone
  * la capa de aplicación, que es la que puede preguntarle a Identidad.
  *
- * <p>Los likes (D11) todavía no existen: son del módulo Social y llegan en la Fase 3 con
- * HU-17.</p>
+ * <p>Los likes (D11) no vienen acá: son del módulo Social, que los cuenta por su cuenta a partir
+ * del {@code registroId} (HU-17). Diario no sabe que existen.</p>
  */
 public record ReseniaDeProduccion(
 		Long registroId,

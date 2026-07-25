@@ -33,6 +33,9 @@ interface RegistroRepository extends JpaRepository<Registro, Long> {
 	/** Las reseñas de la ficha (HU-14): las más nuevas primero. */
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);
 
+	/** Si ese id es una reseña y no un registro sin texto o un número inventado (HU-17). */
+	boolean existsByIdAndReseniaIsNotNull(Long id);
+
 	/** La primera página del feed de seguidos (HU-16). */
 	List<Registro> findByUsuarioIdInOrderByCreadoEnDescIdDesc(Collection<Long> usuarioIds, Limit limite);
 

@@ -8,14 +8,17 @@ import org.springframework.stereotype.Service;
 import io.github.ramiroabadie.backend.diario.ActividadDeDiario;
 import io.github.ramiroabadie.backend.diario.CursorDeActividad;
 import io.github.ramiroabadie.backend.diario.Diario;
+import io.github.ramiroabadie.backend.diario.RegistroDeDiario;
 import io.github.ramiroabadie.backend.identidad.UsuarioPublico;
 import io.github.ramiroabadie.backend.identidad.Usuarios;
 import io.github.ramiroabadie.backend.social.GrafoSocial;
+import io.github.ramiroabadie.backend.social.LikesDeResenias;
 
 /**
  * El caso de uso del feed (HU-16): la composición que anuncia D29 y el motivo por el que el feed
- * no es un módulo ni una tabla materializada. Social dice a quiénes sigo, Diario qué registraron,
- * Identidad cómo se llaman; ninguno de los tres conoce a los otros y acá no se guarda nada.
+ * no es un módulo ni una tabla materializada. Social dice a quiénes sigo y cuántos likes tiene
+ * cada reseña, Diario qué registraron, Identidad cómo se llaman; ninguno de los tres conoce a los
+ * otros y acá no se guarda nada.
  *
  * <p>Está separado del controlador y no adentro, como {@code FusionDeProducciones}, porque la
  * regla del fallback global es una decisión de producto (D22) y no HTTP: en los controladores no
@@ -31,10 +34,13 @@ class ArmadoDelFeed {
 
 	private final Usuarios usuarios;
 
-	ArmadoDelFeed(GrafoSocial grafo, Diario diario, Usuarios usuarios) {
+	private final LikesDeResenias likes;
+
+	ArmadoDelFeed(GrafoSocial grafo, Diario diario, Usuarios usuarios, LikesDeResenias likes) {
 		this.grafo = grafo;
 		this.diario = diario;
 		this.usuarios = usuarios;
+		this.likes = likes;
 	}
 
 	/**
@@ -48,7 +54,9 @@ class ArmadoDelFeed {
 		List<ActividadDeDiario> actividad = global
 				? diario.actividadGlobal(desde, limite)
 				: diario.actividadDe(seguidos, desde, limite);
-		return FeedResponse.desde(global, actividad, autores(actividad), limite);
+		List<Long> resenias = reseniasDe(actividad);
+		return FeedResponse.desde(global, actividad, autores(actividad),
+				likes.contarPorResenia(resenias), likes.conLikeDe(usuarioId, resenias), limite);
 	}
 
 	/** Los nombres de la página entera en una sola consulta, como las firmas de las reseñas. */
@@ -57,5 +65,18 @@ class ArmadoDelFeed {
 				.map(ActividadDeDiario::usuarioId)
 				.distinct()
 				.toList());
+	}
+
+	/**
+	 * Los likes se preguntan solo por los ítems que son reseña: un registro sin texto no tiene nada
+	 * que destacar (HU-17), y meterlo en la lista sería pedirle a Social contadores de cosas que no
+	 * puede tener. Si la página no trae ninguna reseña, las dos consultas no se hacen.
+	 */
+	private List<Long> reseniasDe(List<ActividadDeDiario> actividad) {
+		return actividad.stream()
+				.map(ActividadDeDiario::registro)
+				.filter(registro -> registro.resenia() != null)
+				.map(RegistroDeDiario::id)
+				.toList();
 	}
 }
