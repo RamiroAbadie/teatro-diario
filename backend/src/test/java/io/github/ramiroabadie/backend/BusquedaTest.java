@@ -9,10 +9,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -42,6 +44,9 @@ class BusquedaTest {
 
 	@Autowired
 	private MockMvc mockMvc;
+
+	@Autowired
+	private JdbcTemplate jdbc;
 
 	/** HU-07: el título escrito bien encuentra la ficha, y la respuesta alcanza para elegirla. */
 	@Test
@@ -84,16 +89,24 @@ class BusquedaTest {
 				.andExpect(jsonPath("$[0].titulo").value("Vestigios de un domingo cualquiera en Villa Crespo"));
 	}
 
-	/** Entre dos parecidas gana la que más se parece: es todo el orden de relevancia que hay (D23). */
+	/**
+	 * Entre varias parecidas gana la que más se parece: es todo el orden de relevancia que hay
+	 * (D23). El caso está elegido para que el alfabeto dé la respuesta equivocada — "El
+	 * Nocturama" va antes que "Nocturama" —, porque si no, este test se cumple solo: las tres
+	 * sacan el mismo primer puntaje (la consulta entra completa en las tres) y sin el desempate
+	 * por similitud sobre el título entero el orden lo decide el {@code titulo ASC}.
+	 */
 	@Test
-	void elResultadoMasParecidoVaPrimero() throws Exception {
-		crearProduccion("Nocturama");
+	void elResultadoMasParecidoVaPrimeroYNoElPrimeroDelAlfabeto() throws Exception {
 		crearProduccion("Nocturama y otras vigilias del conurbano");
+		crearProduccion("El Nocturama");
+		crearProduccion("Nocturama");
 
 		mockMvc.perform(get("/api/buscar/producciones").param("q", "Nocturama"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].titulo").value("Nocturama"))
-				.andExpect(jsonPath("$[1].titulo").value("Nocturama y otras vigilias del conurbano"));
+				.andExpect(jsonPath("$[1].titulo").value("El Nocturama"))
+				.andExpect(jsonPath("$[2].titulo").value("Nocturama y otras vigilias del conurbano"));
 	}
 
 	/**
@@ -145,9 +158,27 @@ class BusquedaTest {
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[0].username").value("zulemadelmonte"));
 
+		mockMvc.perform(get("/api/buscar/usuarios").param("q", "sulemadelmonte"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$[0].username").value("zulemadelmonte"));
+
 		mockMvc.perform(get("/api/buscar/usuarios").param("q", "girasol.violeta"))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$[?(@.username == 'zulemadelmonte')]").isEmpty());
+	}
+
+	/**
+	 * Lo que dejó {@code db/busqueda.sql} (D64): el único pedazo del esquema que no sale de las
+	 * entidades. Si alguien lo borra, las tres búsquedas siguen funcionando —por eso ningún otro
+	 * test se enteraría— hasta que el catálogo crezca y cada consulta se lea la tabla entera.
+	 */
+	@Test
+	void laExtensionYSusTresIndicesQuedanCreados() {
+		assertThat(jdbc.queryForObject("SELECT count(*) FROM pg_extension WHERE extname = 'pg_trgm'",
+				Integer.class)).isEqualTo(1);
+		assertThat(jdbc.queryForList("SELECT indexname FROM pg_indexes WHERE indexname LIKE '%_trgm'",
+				String.class)).containsExactlyInAnyOrder(
+						"produccion_titulo_trgm", "persona_nombre_trgm", "usuario_username_trgm");
 	}
 
 	/** Las tres se usan sin cuenta: buscar es leer, y leer no pide nada (D21). */

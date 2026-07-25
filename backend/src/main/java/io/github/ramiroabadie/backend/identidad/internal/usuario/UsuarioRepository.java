@@ -32,7 +32,7 @@ interface UsuarioRepository extends JpaRepository<Usuario, Long> {
 			SELECT * FROM usuario
 			WHERE username ILIKE '%' || :texto || '%' OR username % :texto OR :texto <% username
 			ORDER BY GREATEST(similarity(username, :texto), word_similarity(:texto, username)) DESC,
-			         username ASC, id ASC
+			         similarity(username, :texto) DESC, username ASC, id ASC
 			LIMIT :limite
 			""", nativeQuery = true)
 	List<Usuario> buscarPorUsername(@Param("texto") String texto, @Param("limite") int limite);

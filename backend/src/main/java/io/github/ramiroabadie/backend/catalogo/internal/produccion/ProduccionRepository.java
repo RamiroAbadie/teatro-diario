@@ -52,8 +52,12 @@ interface ProduccionRepository extends JpaRepository<Produccion, Long> {
 	 * de HU-09, donde se escriben tres letras de un título largo y la similitud sobre el
 	 * título entero da casi cero. Las tres usan el índice GIN de {@code db/busqueda.sql}.</p>
 	 *
-	 * <p>Ordena por el mejor de los dos puntajes y termina en el id para que el orden sea
-	 * total: los duplicados que el catálogo acepta (D14, D63) tienen el mismo título.</p>
+	 * <p>Ordena por el mejor de los dos puntajes y desempata por la similitud sobre el título
+	 * entero, que es lo que distingue "Hamlet" de "El Hamlet" y de "Hamlet en llamas": los tres
+	 * sacan 1 en el primer puntaje —la consulta entra completa en los tres— y sin el desempate
+	 * el orden lo terminaba decidiendo el alfabeto, que ponía "El Hamlet" antes que la obra
+	 * escrita tal cual. Después va el título y al final el id, para que el orden sea total: los
+	 * duplicados que el catálogo acepta (D14, D63) tienen el mismo título.</p>
 	 *
 	 * <p>Límite aceptado: los comodines de {@code ILIKE} que alguien tipee ({@code %},
 	 * {@code _}) amplían la búsqueda en vez de romperla, y con el tope de resultados eso no
@@ -69,7 +73,7 @@ interface ProduccionRepository extends JpaRepository<Produccion, Long> {
 			SELECT id FROM produccion
 			WHERE titulo ILIKE '%' || :texto || '%' OR titulo % :texto OR :texto <% titulo
 			ORDER BY GREATEST(similarity(titulo, :texto), word_similarity(:texto, titulo)) DESC,
-			         titulo ASC, id ASC
+			         similarity(titulo, :texto) DESC, titulo ASC, id ASC
 			LIMIT :limite
 			""", nativeQuery = true)
 	List<Long> buscarIdsPorTitulo(@Param("texto") String texto, @Param("limite") int limite);

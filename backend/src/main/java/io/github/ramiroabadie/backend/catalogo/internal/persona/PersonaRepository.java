@@ -29,7 +29,7 @@ interface PersonaRepository extends JpaRepository<Persona, Long> {
 			SELECT * FROM persona
 			WHERE nombre ILIKE '%' || :texto || '%' OR nombre % :texto OR :texto <% nombre
 			ORDER BY GREATEST(similarity(nombre, :texto), word_similarity(:texto, nombre)) DESC,
-			         nombre ASC, id ASC
+			         similarity(nombre, :texto) DESC, nombre ASC, id ASC
 			LIMIT :limite
 			""", nativeQuery = true)
 	List<Persona> buscarPorNombre(@Param("texto") String texto, @Param("limite") int limite);
