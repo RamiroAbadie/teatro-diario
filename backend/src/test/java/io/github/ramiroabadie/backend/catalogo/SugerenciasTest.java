@@ -1,6 +1,11 @@
 package io.github.ramiroabadie.backend.catalogo;
 
+import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import com.jayway.jsonpath.JsonPath;
 import io.github.ramiroabadie.backend.TestcontainersConfiguration;
@@ -16,6 +21,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -41,8 +47,18 @@ class SugerenciasTest {
 
 	private static final String TOKEN_CSRF = "un-token-de-prueba";
 
+	/** Cuánto se queda abierta la transacción que gana, para que la otra tenga con qué chocar. */
+	private static final Duration SOLAPE = Duration.ofMillis(500);
+
 	@Autowired
 	private MockMvc mockMvc;
+
+	/** Los dos únicos que se usan sin pasar por HTTP: el solape hay que provocarlo desde adentro. */
+	@Autowired
+	private Sugerencias sugerencias;
+
+	@Autowired
+	private TransactionTemplate transacciones;
 
 	/**
 	 * HU-08: el formulario mínimo. Solo el título es obligatorio, y la respuesta devuelve lo
@@ -165,6 +181,57 @@ class SugerenciasTest {
 	}
 
 	/**
+	 * La otra forma de las dos pestañas, la que el reintento secuencial no cubre: los dos clics se
+	 * solapan y las dos transacciones leen la sugerencia todavía pendiente. Sin nada que las
+	 * serialice, las dos pasan el chequeo y las dos escriben —la segunda pisa a la primera— y la
+	 * sugerencia sale de la cola dos veces, que es exactamente lo que D69 dice que no puede pasar.
+	 * Lo que lo sostiene es el {@code select ... for update} de leerla para resolverla: la segunda
+	 * espera a que la primera termine, la encuentra resuelta y corta.
+	 *
+	 * <p>El solape se fuerza a mano y no con dos pedidos HTTP a la vez: la ventana real dura lo que
+	 * tarda un {@code update}, así que dos clientes simultáneos casi nunca la pisan y un test así
+	 * pasa por suerte, no por estar bien. Acá la primera transacción se queda abierta a propósito
+	 * mientras la segunda intenta, que es la condición que la base sí puede producir siempre. Se
+	 * llama al caso de uso y no al endpoint por lo mismo: la transacción tiene que ser del test.
+	 * La traducción de esa excepción a un 409 la cubre {@link #aprobarPideLaFichaYaCreadaYSacaLaSugerenciaDeLaCola()}.</p>
+	 */
+	@Test
+	void dosResolucionesSimultaneasNoSacanLaSugerenciaDosVeces() throws Exception {
+		MockHttpSession jazmin = cuenta("jazmin");
+		Long sugerencia = sugerir(jazmin, "La que dos pestañas resuelven a la vez");
+		Long produccion = crearProduccion("La ficha de las dos pestañas");
+
+		CountDownLatch laPrimeraEmpezo = new CountDownLatch(1);
+		ExecutorService hilos = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> primera = hilos.submit(() -> transacciones.executeWithoutResult(estado -> {
+				sugerencias.aprobar(sugerencia, produccion);
+				laPrimeraEmpezo.countDown();
+				dormir(SOLAPE);
+			}));
+			Future<Class<?>> segunda = hilos.submit(() -> {
+				laPrimeraEmpezo.await();
+				try {
+					sugerencias.rechazar(sugerencia, "La rechacé sin ver que ya la habían aprobado");
+					return null;
+				}
+				catch (RuntimeException ex) {
+					return ex.getClass();
+				}
+			});
+
+			primera.get();
+			assertThat(segunda.get()).isEqualTo(SugerenciaResueltaException.class);
+		}
+		finally {
+			hilos.shutdownNow();
+		}
+
+		mockMvc.perform(get("/api/admin/sugerencias").with(user("jefa").roles("ADMIN")))
+				.andExpect(jsonPath(enLaCola(sugerencia)).isEmpty());
+	}
+
+	/**
 	 * Sugerir es de quien tiene cuenta (HU-08) y la cola es del admin, como todo el panel: el
 	 * candado lo pone el prefijo {@code /api/admin} y no una regla nueva.
 	 */
@@ -193,6 +260,15 @@ class SugerenciasTest {
 				.andExpect(status().isCreated())
 				.andReturn();
 		return id(resultado);
+	}
+
+	private static void dormir(Duration cuanto) {
+		try {
+			Thread.sleep(cuanto);
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+		}
 	}
 
 	private void aprobar(Long sugerenciaId, Long produccionId) throws Exception {

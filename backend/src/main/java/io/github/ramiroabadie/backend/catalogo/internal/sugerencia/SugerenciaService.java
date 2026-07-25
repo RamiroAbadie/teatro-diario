@@ -56,7 +56,11 @@ class SugerenciaService implements Sugerencias {
 		buscar(sugerenciaId).rechazar(motivo);
 	}
 
+	/**
+	 * Las dos salidas de la cola leen la fila bloqueada: comprobar el estado y escribirlo tiene que
+	 * ser un solo paso, o dos resoluciones que se solapan sacan la misma sugerencia dos veces.
+	 */
 	private Sugerencia buscar(Long id) {
-		return repositorio.findById(id).orElseThrow(() -> new SugerenciaNoEncontradaException(id));
+		return repositorio.paraResolver(id).orElseThrow(() -> new SugerenciaNoEncontradaException(id));
 	}
 }
