@@ -30,8 +30,10 @@
 - **Autoridad sobre:** registros (con re-visto, D19), ratings, reseñas, el cálculo del
   promedio por producción (último rating por usuario, D20), estadísticas personales (D26).
 - **Expone:** crear/editar/borrar registro; diario de un usuario; actividad de un conjunto de
-  usuarios (insumo del feed); reseñas y promedio de una producción; stats propias; reasignar
-  los registros de una producción a otra (la mitad que le toca en la fusión de duplicados, D63).
+  usuarios (insumo del feed); reseñas y promedio de una producción; si un id es una reseña (lo
+  que la capa de aplicación comprueba antes de dejar que alguien le dé like, D68); stats propias;
+  reasignar los registros de una producción a otra (la mitad que le toca en la fusión de
+  duplicados, D63).
 - **Depende de:** **Catálogo** (validar que la producción existe; leer datos básicos para
   mostrar). Única dependencia módulo-a-módulo del sistema. Guarda `user_id` opaco.
 
@@ -42,7 +44,8 @@
   seguidores y seguidos; like/unlike; conteo de likes.
 - **Depende de:** nadie (referencia `user_id` y `reseña_id` como IDs opacos).
 - **Límite fino asumido:** la reseña (contenido) es de Diario; el like (interacción) es de
-  Social. Decidido conscientemente.
+  Social. Decidido conscientemente. Implementado así en la Fase 3 (D68): Social guarda un
+  `resenia_id` que no sabe qué es, y quien pregunta ya comprobó que exista.
 
 ## Lo que NO es módulo
 

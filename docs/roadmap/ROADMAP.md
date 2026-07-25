@@ -54,7 +54,11 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   D29 venía anunciando: Social dice a quién sigo, Diario qué registró esa gente, Identidad
   cómo se llaman, y no se guarda nada. Con su fallback global para quien no sigue a nadie
   (D22) y paginado por cursor. Decisiones que hicieron falta: D66 y D67.
-- Likes a reseñas (HU-17), que además completa lo que a HU-14 le falta en la ficha.
+- ~~Likes a reseñas (HU-17), que además completa lo que a HU-14 le falta en la ficha.~~ Hecho:
+  el toggle sobre `/api/resenias/{id}/like` y el contador donde se leen reseñas —la ficha, que
+  con esto tiene todo lo que HU-14 pedía, y también el feed—. Social suma su segunda capacidad
+  sin enterarse de qué es una reseña. Decisión que hizo falta: D68, que además amplía D66 (el
+  feed pasa a siete consultas).
 - Sugerencias: el formulario del usuario (HU-08) y la cola del admin (HU-21). Es también
   lo que le falta a HU-07 para que el resultado vacío tenga adónde derivar.
 - Reportes: el botón (HU-18) y la cola del admin (HU-22).

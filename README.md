@@ -253,6 +253,18 @@ plataforma. Para seguir leyendo, mandá el `siguienteCursor` que trae la respues
 `?cursor=...`: es el último ítem entregado, así lo que se cargue mientras tanto no te
 repite ni te saltea nada.
 
+Destacar una reseña es otro toggle, sobre el id del registro que la tiene (un registro sin
+texto no es una reseña y responde 404):
+
+```bash
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" -X POST \
+  localhost:8080/api/resenias/1/like        # y DELETE para sacarlo
+```
+
+El contador llega donde se leen reseñas —la ficha y el feed— como `likes`, con `leDiLike` al
+lado: `true`/`false` es el estado de tu botón y `null` es que no hay botón, porque estás sin
+cuenta o porque ese ítem del feed no tiene reseña.
+
 Ojo igual: esto corre sin HTTPS y la cookie de sesión todavía no es `secure`. Sigue sin ser
 algo para exponer a internet — el endurecimiento va con el deploy, en la Fase 5.
 

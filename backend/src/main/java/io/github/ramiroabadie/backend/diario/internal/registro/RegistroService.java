@@ -169,6 +169,12 @@ class RegistroService implements Diario {
 		return new OpinionesDeProduccion(conUnDecimal(valoracion.getPromedio()), valoracion.getCantidad(), resenias);
 	}
 
+	@Override
+	@Transactional(readOnly = true)
+	public boolean existeResenia(Long registroId) {
+		return repositorio.existsByIdAndReseniaIsNotNull(registroId);
+	}
+
 	/**
 	 * Normaliza la fecha al comienzo del período que nombra y la valida contra su granularidad.
 	 * Rechaza el futuro sobre el período ya normalizado: "agosto de 2026" en julio de 2026 es
