@@ -1,5 +1,8 @@
 package io.github.ramiroabadie.backend.diario;
 
+import java.util.Collection;
+import java.util.List;
+
 /**
  * La interfaz pública del módulo Diario: el corazón del producto (MODULE_MAP). Casos de uso, no
  * endpoints — los invoca hoy la capa de aplicación por HTTP y mañana lo que haga falta, sin
@@ -51,6 +54,26 @@ public interface Diario {
 
 	/** El diario y las estadísticas de una persona (HU-12/13). Público como todo (D21). */
 	DiarioDeUsuario deUsuario(Long usuarioId);
+
+	/**
+	 * La actividad de un conjunto de personas, de la más nueva a la más vieja por fecha de carga:
+	 * el insumo del feed de seguidos (HU-16), que compone la capa de aplicación (D29). Diario no
+	 * sabe qué es seguir a alguien — recibe una lista de ids y devuelve lo que escribieron.
+	 *
+	 * <p>Ordena por cuándo se cargó y no por cuándo se vio la obra, que es al revés que el diario
+	 * (MD-2): un feed muestra lo que la gente está contando ahora, y quien sube hoy una salida de
+	 * 2019 la está contando hoy.</p>
+	 *
+	 * @param desde el último registro de la página anterior, o {@code null} para la primera
+	 * @param limite cuántos como máximo; quien llama decide, el módulo no inventa un default
+	 */
+	List<ActividadDeDiario> actividadDe(Collection<Long> usuarioIds, CursorDeActividad desde, int limite);
+
+	/**
+	 * Lo mismo pero de todo el mundo: el fallback del feed para quien todavía no sigue a nadie
+	 * (D22). Que todo el contenido sea público (D21) es lo que lo hace posible.
+	 */
+	List<ActividadDeDiario> actividadGlobal(CursorDeActividad desde, int limite);
 
 	/** Promedio (D20) y reseñas de una producción, para la ficha (HU-14). */
 	OpinionesDeProduccion opinionesDe(Long produccionId);

@@ -1,7 +1,10 @@
 package io.github.ramiroabadie.backend.diario.internal.registro;
 
+import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,6 +32,36 @@ interface RegistroRepository extends JpaRepository<Registro, Long> {
 
 	/** Las reseñas de la ficha (HU-14): las más nuevas primero. */
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);
+
+	/** La primera página del feed de seguidos (HU-16). */
+	List<Registro> findByUsuarioIdInOrderByCreadoEnDescIdDesc(Collection<Long> usuarioIds, Limit limite);
+
+	/** La primera página del feed global, el fallback de quien no sigue a nadie (D22). */
+	List<Registro> findAllByOrderByCreadoEnDescIdDesc(Limit limite);
+
+	/**
+	 * Las páginas siguientes del feed de seguidos: lo cargado antes del último registro que se
+	 * entregó (D66). Escrita a mano porque el corte del cursor es sobre dos columnas —instante e
+	 * id, para que dos cargas en el mismo instante no se pisen— y un método derivado no puede
+	 * expresar el paréntesis que eso necesita.
+	 */
+	@Query("""
+			select r from Registro r
+			where r.usuarioId in :usuarioIds
+			  and (r.creadoEn < :creadoEn or (r.creadoEn = :creadoEn and r.id < :registroId))
+			order by r.creadoEn desc, r.id desc
+			""")
+	List<Registro> actividadDesde(@Param("usuarioIds") Collection<Long> usuarioIds,
+			@Param("creadoEn") Instant creadoEn, @Param("registroId") Long registroId, Limit limite);
+
+	/** Lo mismo, sin filtrar por autor: las páginas siguientes del feed global. */
+	@Query("""
+			select r from Registro r
+			where r.creadoEn < :creadoEn or (r.creadoEn = :creadoEn and r.id < :registroId)
+			order by r.creadoEn desc, r.id desc
+			""")
+	List<Registro> actividadGlobalDesde(@Param("creadoEn") Instant creadoEn,
+			@Param("registroId") Long registroId, Limit limite);
 
 	/**
 	 * La mudanza de la fusión (D63), en una sola sentencia: los registros de la ficha duplicada
