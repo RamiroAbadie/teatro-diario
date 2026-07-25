@@ -104,6 +104,10 @@ class SecurityConfig {
 				.authorizeHttpRequests(reglas -> reglas
 						.requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login").permitAll()
 						.requestMatchers(HttpMethod.GET, "/api/auth/yo").authenticated()
+						// El feed es la única lectura que no existe sin un yo: son los registros
+						// de los que sigo (HU-16). Va antes de la regla de abajo, que abre todos
+						// los GET, porque la primera que coincide es la que manda.
+						.requestMatchers(HttpMethod.GET, "/api/feed").authenticated()
 						.requestMatchers("/api/admin/**").hasRole("ADMIN")
 						// Todo el contenido es público y se lee sin cuenta (D21).
 						.requestMatchers(HttpMethod.GET, "/api/**").permitAll()

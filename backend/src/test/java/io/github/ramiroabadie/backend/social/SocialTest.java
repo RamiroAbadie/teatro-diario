@@ -1,0 +1,261 @@
+package io.github.ramiroabadie.backend.social;
+
+import com.jayway.jsonpath.JsonPath;
+import io.github.ramiroabadie.backend.TestcontainersConfiguration;
+import jakarta.servlet.http.Cookie;
+import org.junit.jupiter.api.Test;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockHttpSession;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+/**
+ * Los criterios de aceptación de HU-15 y HU-16, ejecutables. El que vigila la regla difícil es
+ * {@link #elFeedTraeLoDeLosSeguidosYNadaMas()}: el feed es una composición de tres módulos que no
+ * se conocen (D29), y la primera "optimización" que se le ocurre a cualquiera —una tabla de feed,
+ * o un join entre registros y seguimientos— rompe el límite que sostiene toda la arquitectura.
+ *
+ * <p>La base es la misma para toda la clase y para las demás, así que cada test usa sus propias
+ * cuentas y sus propias producciones en vez de limpiar entre medio. Por eso el test del feed
+ * global mira quién está primero y no cuántos hay: lo global incluye lo que dejaron los otros
+ * tests.</p>
+ */
+@Import(TestcontainersConfiguration.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+class SocialTest {
+
+	private static final String TOKEN_CSRF = "un-token-de-prueba";
+
+	@Autowired
+	private MockMvc mockMvc;
+
+	/** HU-15: el botón, los dos contadores y la vuelta atrás. Sin aprobación de por medio (D21). */
+	@Test
+	void seguirYDejarDeSeguirSeVeEnLosContadoresYEnElBoton() throws Exception {
+		MockHttpSession marina = cuenta("marina");
+		cuenta("dario");
+
+		// Sin sesión no hay botón que mostrar, así que no hay estado que devolver.
+		mockMvc.perform(get("/api/usuarios/dario"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.seguidores").value(0))
+				.andExpect(jsonPath("$.seguidos").value(0))
+				.andExpect(jsonPath("$.loSigo").isEmpty());
+
+		mockMvc.perform(conCsrf(post("/api/usuarios/dario/seguir")).session(marina))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/usuarios/dario").session(marina))
+				.andExpect(jsonPath("$.seguidores").value(1))
+				.andExpect(jsonPath("$.loSigo").value(true));
+		// En el perfil propio tampoco hay botón, y el contador que se mueve es el otro.
+		mockMvc.perform(get("/api/usuarios/marina").session(marina))
+				.andExpect(jsonPath("$.seguidos").value(1))
+				.andExpect(jsonPath("$.seguidores").value(0))
+				.andExpect(jsonPath("$.loSigo").isEmpty());
+
+		mockMvc.perform(conCsrf(delete("/api/usuarios/dario/seguir")).session(marina))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/usuarios/dario").session(marina))
+				.andExpect(jsonPath("$.seguidores").value(0))
+				.andExpect(jsonPath("$.loSigo").value(false));
+	}
+
+	/** El toggle es idempotente: el doble clic es lo normal, no un error. Y nadie se sigue solo. */
+	@Test
+	void seguirDosVecesEsSeguirUnaYNadieSeSigueASiMismo() throws Exception {
+		MockHttpSession valeria = cuenta("valeria");
+		cuenta("nestor");
+
+		mockMvc.perform(conCsrf(post("/api/usuarios/valeria/seguir")).session(valeria))
+				.andExpect(status().isBadRequest());
+
+		mockMvc.perform(conCsrf(post("/api/usuarios/nestor/seguir")).session(valeria))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(conCsrf(post("/api/usuarios/nestor/seguir")).session(valeria))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/usuarios/nestor"))
+				.andExpect(jsonPath("$.seguidores").value(1));
+
+		mockMvc.perform(conCsrf(delete("/api/usuarios/nestor/seguir")).session(valeria))
+				.andExpect(status().isNoContent());
+		mockMvc.perform(conCsrf(delete("/api/usuarios/nestor/seguir")).session(valeria))
+				.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/usuarios/nestor"))
+				.andExpect(jsonPath("$.seguidores").value(0));
+	}
+
+	/**
+	 * HU-16: el feed es lo que registraron los que sigo. Ni lo de los desconocidos ni lo mío
+	 * propio —para eso está mi diario—, y con el autor y la obra puestos, que es lo que hace que
+	 * una línea del feed se pueda leer sin pedir nada más.
+	 */
+	@Test
+	void elFeedTraeLoDeLosSeguidosYNadaMas() throws Exception {
+		Long laDeCiro = crearProduccion("La que registró quien sigo");
+		Long laDeOtros = crearProduccion("La que registró quien no sigo");
+		MockHttpSession paula = cuenta("paula");
+		MockHttpSession ciro = cuenta("ciro");
+		MockHttpSession lucrecia = cuenta("lucrecia");
+
+		registrar(ciro, laDeCiro, 8, "Lo mejor que vi en el año");
+		registrar(lucrecia, laDeOtros, 3, null);
+		registrar(paula, laDeOtros, 5, null);
+		seguir(paula, "ciro");
+
+		mockMvc.perform(get("/api/feed").session(paula))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.global").value(false))
+				.andExpect(jsonPath("$.items.length()").value(1))
+				.andExpect(jsonPath("$.items[0].autor").value("ciro"))
+				.andExpect(jsonPath("$.items[0].produccion.titulo").value("La que registró quien sigo"))
+				.andExpect(jsonPath("$.items[0].produccion.enCatalogo").value(true))
+				.andExpect(jsonPath("$.items[0].rating").value(8))
+				.andExpect(jsonPath("$.items[0].resenia").value("Lo mejor que vi en el año"))
+				.andExpect(jsonPath("$.siguienteCursor").isEmpty());
+	}
+
+	/**
+	 * HU-16 y D22: quien todavía no sigue a nadie no se encuentra una pantalla vacía, sino la
+	 * actividad de toda la plataforma — y la respuesta lo avisa, porque la pantalla tiene que
+	 * poder explicar qué está mostrando (USER_FLOWS, flujo 2).
+	 */
+	@Test
+	void sinSeguidosElFeedEsGlobalYLoAvisa() throws Exception {
+		MockHttpSession ariel = cuenta("ariel");
+		MockHttpSession felipe = cuenta("felipe");
+		Long produccion = crearProduccion("La que ve todo el mundo");
+		registrar(felipe, produccion, 7, null);
+
+		mockMvc.perform(get("/api/feed").session(ariel))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.global").value(true))
+				.andExpect(jsonPath("$.items[0].autor").value("felipe"))
+				.andExpect(jsonPath("$.items[0].produccion.titulo").value("La que ve todo el mundo"));
+
+		// Con un solo seguido el feed ya es suyo, aunque tenga menos cosas que el global.
+		seguir(ariel, "felipe");
+		mockMvc.perform(get("/api/feed").session(ariel))
+				.andExpect(jsonPath("$.global").value(false))
+				.andExpect(jsonPath("$.items.length()").value(1));
+	}
+
+	/**
+	 * HU-16: la paginación. El cursor es el último ítem entregado y no un número de página (D66),
+	 * así que lo que se cargó mientras tanto —acá, un registro nuevo entre las dos páginas— entra
+	 * arriba de todo la próxima vez que se pida la primera, sin empujar nada ni repetirse.
+	 */
+	@Test
+	void elFeedPaginaConCursorSinRepetirNiSaltear() throws Exception {
+		MockHttpSession silvina = cuenta("silvina");
+		MockHttpSession teresa = cuenta("teresa");
+		Long primera = registrar(teresa, crearProduccion("Primera de la noche"), null, null);
+		Long segunda = registrar(teresa, crearProduccion("Segunda de la noche"), null, null);
+		Long tercera = registrar(teresa, crearProduccion("Tercera de la noche"), null, null);
+		seguir(silvina, "teresa");
+
+		MvcResult pagina = mockMvc.perform(get("/api/feed").param("tamanio", "2").session(silvina))
+				.andExpect(jsonPath("$.items.length()").value(2))
+				.andExpect(jsonPath("$.items[0].registroId").value(tercera))
+				.andExpect(jsonPath("$.items[1].registroId").value(segunda))
+				.andExpect(jsonPath("$.siguienteCursor").isNotEmpty())
+				.andReturn();
+		String cursor = JsonPath.read(pagina.getResponse().getContentAsString(), "$.siguienteCursor");
+
+		// Entre las dos páginas alguien registra: no tiene que aparecer en la segunda ni correr
+		// a la que ya se leyó una fila más abajo, que es lo que haría un offset.
+		Long recien = registrar(teresa, crearProduccion("La que llegó tarde"), null, null);
+
+		mockMvc.perform(get("/api/feed").param("tamanio", "2").param("cursor", cursor).session(silvina))
+				.andExpect(jsonPath("$.items.length()").value(1))
+				.andExpect(jsonPath("$.items[0].registroId").value(primera))
+				.andExpect(jsonPath("$.siguienteCursor").isEmpty());
+
+		mockMvc.perform(get("/api/feed").param("tamanio", "2").session(silvina))
+				.andExpect(jsonPath("$.items[0].registroId").value(recien));
+
+		mockMvc.perform(get("/api/feed").param("cursor", "cualquier-cosa").session(silvina))
+				.andExpect(status().isBadRequest());
+	}
+
+	/** El feed y el botón de seguir son de quien tiene cuenta; a quien no está no se lo sigue. */
+	@Test
+	void elFeedYElBotonPidenSesionYUnaCuentaQueExista() throws Exception {
+		MockHttpSession ramona = cuenta("ramona");
+
+		mockMvc.perform(get("/api/feed"))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(conCsrf(post("/api/usuarios/ramona/seguir")))
+				.andExpect(status().isUnauthorized());
+		mockMvc.perform(conCsrf(post("/api/usuarios/nadie-con-ese-nombre/seguir")).session(ramona))
+				.andExpect(status().isNotFound());
+	}
+
+	private void seguir(MockHttpSession sesion, String username) throws Exception {
+		mockMvc.perform(conCsrf(post("/api/usuarios/" + username + "/seguir")).session(sesion))
+				.andExpect(status().isNoContent());
+	}
+
+	private Long crearProduccion(String titulo) throws Exception {
+		MvcResult resultado = mockMvc.perform(json(post("/api/admin/producciones"), """
+				{"titulo":"%s","estado":"EN_CARTEL"}""".formatted(titulo))
+				.with(user("jefa").roles("ADMIN")))
+				.andExpect(status().isCreated())
+				.andReturn();
+		return id(resultado);
+	}
+
+	private MockHttpSession cuenta(String username) throws Exception {
+		MvcResult resultado = mockMvc.perform(json(post("/api/auth/registro"), """
+				{"username":"%s","email":"%s@example.com","password":"unaClaveLarga"}"""
+				.formatted(username, username)))
+				.andExpect(status().isCreated())
+				.andReturn();
+		return (MockHttpSession) resultado.getRequest().getSession(false);
+	}
+
+	private Long registrar(MockHttpSession sesion, Long produccionId, Integer rating, String resenia)
+			throws Exception {
+		MvcResult resultado = mockMvc.perform(json(post("/api/registros"), """
+				{"produccionId":%d,"fecha":"2025-05-05","granularidad":"DIA","rating":%s,"resenia":%s}"""
+				.formatted(produccionId, rating, comillas(resenia)))
+				.session(sesion))
+				.andExpect(status().isCreated())
+				.andReturn();
+		return id(resultado);
+	}
+
+	private static String comillas(String valor) {
+		return valor == null ? "null" : "\"" + valor + "\"";
+	}
+
+	private static Long id(MvcResult resultado) throws Exception {
+		return ((Number) JsonPath.read(resultado.getResponse().getContentAsString(), "$.id")).longValue();
+	}
+
+	private MockHttpServletRequestBuilder json(MockHttpServletRequestBuilder peticion, String cuerpo) {
+		return conCsrf(peticion).contentType(MediaType.APPLICATION_JSON).content(cuerpo);
+	}
+
+	/** Doble envío, igual que en {@code AutenticacionTest}: cookie con el token y header con él. */
+	private MockHttpServletRequestBuilder conCsrf(MockHttpServletRequestBuilder peticion) {
+		return peticion.cookie(new Cookie("XSRF-TOKEN", TOKEN_CSRF)).header("X-XSRF-TOKEN", TOKEN_CSRF);
+	}
+}

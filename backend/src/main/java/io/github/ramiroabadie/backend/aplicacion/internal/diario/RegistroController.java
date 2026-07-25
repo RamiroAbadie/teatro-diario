@@ -8,7 +8,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -23,14 +22,13 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ramiroabadie.backend.aplicacion.internal.SesionActual;
 import io.github.ramiroabadie.backend.diario.Diario;
 import io.github.ramiroabadie.backend.diario.ProduccionInexistenteException;
 import io.github.ramiroabadie.backend.diario.RegistroAjenoException;
 import io.github.ramiroabadie.backend.diario.RegistroDeDiario;
 import io.github.ramiroabadie.backend.diario.RegistroInvalidoException;
 import io.github.ramiroabadie.backend.diario.RegistroNoEncontradoException;
-import io.github.ramiroabadie.backend.identidad.UsuarioPublico;
-import io.github.ramiroabadie.backend.identidad.Usuarios;
 
 /**
  * El gesto de registro y sus correcciones (HU-09/10/11).
@@ -52,11 +50,11 @@ class RegistroController {
 
 	private final Diario diario;
 
-	private final Usuarios usuarios;
+	private final SesionActual sesion;
 
-	RegistroController(Diario diario, Usuarios usuarios) {
+	RegistroController(Diario diario, SesionActual sesion) {
 		this.diario = diario;
-		this.usuarios = usuarios;
+		this.sesion = sesion;
 	}
 
 	/**
@@ -67,26 +65,19 @@ class RegistroController {
 	public ResponseEntity<RegistroDeDiario> registrar(@Valid @RequestBody RegistroRequest req,
 			Authentication autenticado) {
 		return ResponseEntity.status(HttpStatus.CREATED)
-				.body(diario.registrar(usuarioActual(autenticado), req.aNuevoRegistro()));
+				.body(diario.registrar(sesion.id(autenticado), req.aNuevoRegistro()));
 	}
 
 	@PutMapping("/{id}")
 	public RegistroDeDiario editar(@PathVariable Long id, @Valid @RequestBody RegistroRequest req,
 			Authentication autenticado) {
-		return diario.editar(usuarioActual(autenticado), id, req.aNuevoRegistro());
+		return diario.editar(sesion.id(autenticado), id, req.aNuevoRegistro());
 	}
 
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> borrar(@PathVariable Long id, Authentication autenticado) {
-		diario.borrar(usuarioActual(autenticado), id);
+		diario.borrar(sesion.id(autenticado), id);
 		return ResponseEntity.noContent().build();
-	}
-
-	private Long usuarioActual(Authentication autenticado) {
-		return usuarios.porUsername(autenticado.getName())
-				.map(UsuarioPublico::id)
-				.orElseThrow(() -> new AuthenticationCredentialsNotFoundException(
-						"La cuenta de esta sesión ya no existe"));
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)

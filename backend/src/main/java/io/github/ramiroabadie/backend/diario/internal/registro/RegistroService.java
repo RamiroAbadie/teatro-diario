@@ -3,6 +3,7 @@ package io.github.ramiroabadie.backend.diario.internal.registro;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -11,11 +12,14 @@ import java.util.TreeMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.springframework.data.domain.Limit;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import io.github.ramiroabadie.backend.catalogo.CatalogoProducciones;
 import io.github.ramiroabadie.backend.catalogo.ProduccionBasica;
+import io.github.ramiroabadie.backend.diario.ActividadDeDiario;
+import io.github.ramiroabadie.backend.diario.CursorDeActividad;
 import io.github.ramiroabadie.backend.diario.Diario;
 import io.github.ramiroabadie.backend.diario.DiarioDeUsuario;
 import io.github.ramiroabadie.backend.diario.EstadisticasDeDiario;
@@ -128,6 +132,30 @@ class RegistroService implements Diario {
 				todos(conFecha, sinFecha).map(Registro::getProduccionId).distinct().toList());
 		return new DiarioDeUsuario(describir(conFecha, producciones), describir(sinFecha, producciones),
 				estadisticas(conFecha, sinFecha));
+	}
+
+	/**
+	 * El insumo del feed de seguidos (HU-16). La lista vacía se ataja antes de ir a la base: sin
+	 * nadie a quien mirar no hay consulta que hacer, y un {@code in ()} vacío es una query que
+	 * Postgres tiene que resolver para devolver nada.
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public List<ActividadDeDiario> actividadDe(Collection<Long> usuarioIds, CursorDeActividad desde, int limite) {
+		if (usuarioIds.isEmpty()) {
+			return List.of();
+		}
+		return actividad(desde == null
+				? repositorio.findByUsuarioIdInOrderByCreadoEnDescIdDesc(usuarioIds, Limit.of(limite))
+				: repositorio.actividadDesde(usuarioIds, desde.creadoEn(), desde.registroId(), Limit.of(limite)));
+	}
+
+	@Override
+	@Transactional(readOnly = true)
+	public List<ActividadDeDiario> actividadGlobal(CursorDeActividad desde, int limite) {
+		return actividad(desde == null
+				? repositorio.findAllByOrderByCreadoEnDescIdDesc(Limit.of(limite))
+				: repositorio.actividadGlobalDesde(desde.creadoEn(), desde.registroId(), Limit.of(limite)));
 	}
 
 	@Override
@@ -246,6 +274,19 @@ class RegistroService implements Diario {
 
 	private Stream<Registro> todos(List<Registro> conFecha, List<Registro> sinFecha) {
 		return Stream.concat(conFecha.stream(), sinFecha.stream());
+	}
+
+	/**
+	 * Una página del feed con los títulos puestos. Igual que el diario: una sola consulta a
+	 * Catálogo para toda la página, no una por línea.
+	 */
+	private List<ActividadDeDiario> actividad(List<Registro> pagina) {
+		Map<Long, ProduccionBasica> producciones = catalogo.porIds(
+				pagina.stream().map(Registro::getProduccionId).distinct().toList());
+		return pagina.stream()
+				.map(registro -> new ActividadDeDiario(registro.getUsuarioId(),
+						describir(registro, producciones.get(registro.getProduccionId()))))
+				.toList();
 	}
 
 	private List<RegistroDeDiario> describir(List<Registro> registros, Map<Long, ProduccionBasica> producciones) {
