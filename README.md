@@ -265,6 +265,35 @@ El contador llega donde se leen reseñas —la ficha y el feed— como `likes`, 
 lado: `true`/`false` es el estado de tu botón y `null` es que no hay botón, porque estás sin
 cuenta o porque ese ítem del feed no tiene reseña.
 
+Cuando la obra que querés registrar no está —la búsqueda no la encuentra, el catálogo es
+cerrado (D7)—, se sugiere. Es un POST con sesión y el título es lo único obligatorio:
+
+```bash
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' \
+  -d '{"titulo":"Una que vi en 2014","sala":"Un sótano de Almagro","anio":2014}' \
+  localhost:8080/api/sugerencias
+```
+
+Del otro lado está la cola del admin. Se aprueba **después** de cargar la ficha con
+`/api/admin/producciones`, diciendo en cuál terminó: así, si dejás el formulario por la
+mitad, la sugerencia sigue esperando en vez de haberse perdido.
+
+```bash
+curl -b cookies.txt localhost:8080/api/admin/sugerencias   # con el username de quien sugirió
+
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' -d '{"produccionId":1}' \
+  localhost:8080/api/admin/sugerencias/1/aprobar
+
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" \
+  -H 'Content-Type: application/json' -d '{"motivo":"Ya está cargada"}' \
+  localhost:8080/api/admin/sugerencias/2/rechazar
+```
+
+Al que sugirió no le llega nada: no hay notificaciones en el MVP (MD-3). Si se aprueba, la
+obra simplemente aparece en el catálogo.
+
 Ojo igual: esto corre sin HTTPS y la cookie de sesión todavía no es `secure`. Sigue sin ser
 algo para exponer a internet — el endurecimiento va con el deploy, en la Fase 5.
 
