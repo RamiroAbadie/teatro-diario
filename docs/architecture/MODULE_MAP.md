@@ -38,8 +38,8 @@
 ### Social
 - **Responsabilidad:** el grafo social y las interacciones sobre contenido.
 - **Autoridad sobre:** follows y likes a reseñas.
-- **Expone:** follow/unfollow; "IDs seguidos por X" (insumo del feed); like/unlike;
-  conteo de likes.
+- **Expone:** follow/unfollow; "IDs seguidos por X" (insumo del feed); contadores de
+  seguidores y seguidos; like/unlike; conteo de likes.
 - **Depende de:** nadie (referencia `user_id` y `reseña_id` como IDs opacos).
 - **Límite fino asumido:** la reseña (contenido) es de Diario; el like (interacción) es de
   Social. Decidido conscientemente.
@@ -48,7 +48,7 @@
 
 | Cosa | Dónde vive |
 |---|---|
-| **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios |
+| **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios. Construido así en la Fase 3 (D66): tres consultas al leer, cero tablas nuevas |
 | **Fusión de fichas duplicadas** (D63) | Mismo patrón: caso de uso de composición en la capa de aplicación. Diario muda los registros, Catálogo borra la ficha vacía, y las dos cosas pasan en una transacción. Ninguno de los dos módulos se entera del otro |
 | **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23): tres endpoints bajo `/api/buscar/...`, dos de Catálogo y uno de Identidad, sin composición en el medio porque ninguno necesita datos del otro (D65). Módulo propio solo si algún día hay motor dedicado |
 | **Autorización** | Partida en dos, y a propósito (D61). *Quién sos* y *si sos admin* son transversales: la capa de aplicación traduce la sesión a un `user_id` y sostiene el candado de `/api/admin/**`. *Si este dato es tuyo* lo hace cumplir el módulo dueño del dato, con el `user_id` que le pasan: Diario rechaza editar o borrar un registro ajeno |

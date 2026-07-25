@@ -83,8 +83,8 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 
 ## Estado actual
 
-**Fase 2 terminada, entrando en la 3 — lo social.** Todavía no hay nada que puedas *usar*:
-hay una API que responde.
+**Fase 3 en curso — lo social.** Todavía no hay nada que puedas *usar*: hay una API que
+responde.
 
 Lo que funciona hoy:
 
@@ -100,12 +100,16 @@ Lo que funciona hoy:
 - **Búsqueda** de producciones, personas y usuarios con `pg_trgm`: aguanta el error de
   tipeo y el título escrito a medias, que es lo que hace usable buscar la obra al momento
   de registrarla
+- **Seguir gente y el feed**: seguir y dejar de seguir, contadores en el perfil, y la home
+  logueada con lo que registraron los que seguís —o la actividad de toda la plataforma, si
+  todavía no seguís a nadie—. El feed no es una tabla: se arma al leer, componiendo tres
+  módulos que no se conocen entre sí
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| Follow, feed y likes | Fase 3 |
+| Likes, sugerencias y reportes | Fase 3 (lo que queda) |
 | **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
 
@@ -233,6 +237,21 @@ curl "localhost:8080/api/buscar/usuarios?q=tuusu"
 La granularidad de la fecha es `DIA`, `MES`, `ANIO` o `SIN_FECHA`: es la que decide hasta
 dónde se lee la fecha que mandaste, así cargar algo que viste "en 2019" no necesita
 inventarle un día.
+
+Seguir a alguien es un POST al perfil ajeno, y el feed es el único `GET` que pide cuenta —
+sin ella no hay "los que sigo":
+
+```bash
+curl -b cookies.txt -c cookies.txt -H "X-XSRF-TOKEN: $(token)" -X POST \
+  localhost:8080/api/usuarios/otrousuario/seguir    # y DELETE para dejar de seguir
+
+curl -b cookies.txt "localhost:8080/api/feed?tamanio=20"
+```
+
+Si todavía no seguís a nadie, el feed viene con `"global": true` y la actividad de toda la
+plataforma. Para seguir leyendo, mandá el `siguienteCursor` que trae la respuesta como
+`?cursor=...`: es el último ítem entregado, así lo que se cargue mientras tanto no te
+repite ni te saltea nada.
 
 Ojo igual: esto corre sin HTTPS y la cookie de sesión todavía no es `secure`. Sigue sin ser
 algo para exponer a internet — el endurecimiento va con el deploy, en la Fase 5.
