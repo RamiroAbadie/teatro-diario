@@ -34,22 +34,30 @@
 - **Autoridad sobre:** registros (con re-visto, D19), ratings, reseñas, el cálculo del
   promedio por producción (último rating por usuario, D20), estadísticas personales (D26).
 - **Expone:** crear/editar/borrar registro; diario de un usuario; actividad de un conjunto de
-  usuarios (insumo del feed); reseñas y promedio de una producción; si un id es una reseña (lo
-  que la capa de aplicación comprueba antes de dejar que alguien le dé like, D68); stats propias;
-  reasignar los registros de una producción a otra (la mitad que le toca en la fusión de
-  duplicados, D63).
+  usuarios (insumo del feed); reseñas y promedio de una producción; quién escribió una reseña —o
+  nadie, si ese id no es una reseña—, que es lo que la capa de aplicación comprueba antes de
+  dejar que alguien le dé like o la reporte (D68, D70); los registros de una lista de ids (el
+  contexto de la cola de reportes); stats propias; reasignar los registros de una producción a
+  otra (la mitad que le toca en la fusión de duplicados, D63); **borrar el texto de una reseña**,
+  que es la mitad que le toca en la resolución de un reporte (D40, D70) — deja el registro y su
+  puntaje, así que el promedio de D20 no se mueve.
 - **Depende de:** **Catálogo** (validar que la producción existe; leer datos básicos para
   mostrar). Única dependencia módulo-a-módulo del sistema. Guarda `user_id` opaco.
 
 ### Social
 - **Responsabilidad:** el grafo social y las interacciones sobre contenido.
-- **Autoridad sobre:** follows y likes a reseñas.
+- **Autoridad sobre:** follows, likes a reseñas y reportes de reseñas.
 - **Expone:** follow/unfollow; "IDs seguidos por X" (insumo del feed); contadores de
-  seguidores y seguidos; like/unlike; conteo de likes.
+  seguidores y seguidos; like/unlike; conteo de likes; recepción de reportes y la cola de los
+  que faltan resolver. Implementado así en la Fase 3 (D70): el módulo guarda la cola y anota el
+  veredicto, pero no lo ejecuta —borrar el texto reportado es de Diario, dueño del dato— y los
+  dos controladores son de la capa de aplicación, uno porque necesita la sesión y el autor de la
+  reseña, el otro porque la cola compone tres módulos para mostrar el contexto.
 - **Depende de:** nadie (referencia `user_id` y `reseña_id` como IDs opacos).
-- **Límite fino asumido:** la reseña (contenido) es de Diario; el like (interacción) es de
-  Social. Decidido conscientemente. Implementado así en la Fase 3 (D68): Social guarda un
-  `resenia_id` que no sabe qué es, y quien pregunta ya comprobó que exista.
+- **Límite fino asumido:** la reseña (contenido) es de Diario; el like y el reporte
+  (interacciones) son de Social. Decidido conscientemente. Implementado así en la Fase 3 (D68,
+  D70): Social guarda un `resenia_id` que no sabe qué es, y quien pregunta ya comprobó que
+  exista.
 
 ## Lo que NO es módulo
 
@@ -57,6 +65,7 @@
 |---|---|
 | **Feed** (de seguidos y global) | Caso de uso de **composición** en la capa de aplicación: pide a Social los seguidos, a Diario su actividad, a Identidad los nombres. No es un lugar del código con datos propios. Construido así en la Fase 3 (D66): se arma al leer, con cinco consultas por id y cero tablas nuevas |
 | **Fusión de fichas duplicadas** (D63) | Mismo patrón: caso de uso de composición en la capa de aplicación. Diario muda los registros, Catálogo borra la ficha vacía, y las dos cosas pasan en una transacción. Ninguno de los dos módulos se entera del otro |
+| **Resolución de un reporte** (D40) | Mismo patrón: caso de uso de composición en la capa de aplicación. Social anota el veredicto y Diario borra el texto reportado, y las dos cosas pasan en una transacción. Construido así en la Fase 3 (D70) |
 | **Búsqueda** | Cada módulo expone búsqueda sobre lo suyo (D23): tres endpoints bajo `/api/buscar/...`, dos de Catálogo y uno de Identidad, sin composición en el medio porque ninguno necesita datos del otro (D65). Módulo propio solo si algún día hay motor dedicado |
 | **Autorización** | Partida en dos, y a propósito (D61). *Quién sos* y *si sos admin* son transversales: la capa de aplicación traduce la sesión a un `user_id` y sostiene el candado de `/api/admin/**`. *Si este dato es tuyo* lo hace cumplir el módulo dueño del dato, con el `user_id` que le pasan: Diario rechaza editar o borrar un registro ajeno |
 | **Notificaciones, emails** | No existen en el MVP |
