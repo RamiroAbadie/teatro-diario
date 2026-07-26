@@ -3,6 +3,7 @@ package io.github.ramiroabadie.backend.diario.internal.registro;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -33,8 +34,16 @@ interface RegistroRepository extends JpaRepository<Registro, Long> {
 	/** Las reseñas de la ficha (HU-14): las más nuevas primero. */
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);
 
-	/** Si ese id es una reseña y no un registro sin texto o un número inventado (HU-17). */
-	boolean existsByIdAndReseniaIsNotNull(Long id);
+	/**
+	 * Quién escribió esa reseña, si ese id es una reseña y no un registro sin texto o un número
+	 * inventado (HU-17, HU-18). Devuelve la columna sola y no la fila: lo único que se pregunta es
+	 * de quién es.
+	 */
+	@Query("select r.usuarioId from Registro r where r.id = :id and r.resenia is not null")
+	Optional<Long> autorDeResenia(@Param("id") Long id);
+
+	/** Los registros de una lista de ids: el contexto de la cola de reportes (HU-22). */
+	List<Registro> findByIdIn(Collection<Long> ids);
 
 	/** La primera página del feed de seguidos (HU-16). */
 	List<Registro> findByUsuarioIdInOrderByCreadoEnDescIdDesc(Collection<Long> usuarioIds, Limit limite);

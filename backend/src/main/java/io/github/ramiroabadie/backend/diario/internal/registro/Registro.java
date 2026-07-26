@@ -96,6 +96,16 @@ class Registro {
 		this.resenia = resenia;
 	}
 
+	/**
+	 * La moderación borra el texto y deja la salida al teatro (HU-22, D70): el registro sigue
+	 * contando qué vio esa persona y con qué puntaje, así que el promedio de D20 no se entera.
+	 * Después de esto el registro deja de ser una reseña: sale de las reseñas de la ficha y sigue
+	 * en el feed sin texto, porque el feed son los registros y no las reseñas (D66).
+	 */
+	void borrarResenia() {
+		this.resenia = null;
+	}
+
 	boolean esDe(Long usuarioId) {
 		return this.usuarioId.equals(usuarioId);
 	}

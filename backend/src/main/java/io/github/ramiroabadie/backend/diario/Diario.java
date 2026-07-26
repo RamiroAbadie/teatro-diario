@@ -2,6 +2,7 @@ package io.github.ramiroabadie.backend.diario;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * La interfaz pública del módulo Diario: el corazón del producto (MODULE_MAP). Casos de uso, no
@@ -79,14 +80,43 @@ public interface Diario {
 	OpinionesDeProduccion opinionesDe(Long produccionId);
 
 	/**
-	 * Si ese registro es una reseña: existe y tiene texto. Lo pregunta la capa de aplicación antes
-	 * de dejar que alguien le dé like (HU-17), y no es la misma situación que seguir a alguien
-	 * (D67): ahí los dos ids se resolvieron para llegar hasta el caso de uso, y acá el id llega
-	 * crudo de la URL, así que sin este chequeo se guardarían likes a números inventados.
+	 * Quién escribió esa reseña, o vacío si ese id no es una reseña —no existe, o existe y nadie
+	 * escribió nada en él—. Lo pregunta la capa de aplicación antes de dejar que alguien le dé
+	 * like (HU-17) o la reporte (HU-18), y no es la misma situación que seguir a alguien (D67):
+	 * ahí los dos ids se resolvieron para llegar hasta el caso de uso, y acá el id llega crudo de
+	 * la URL, así que sin este chequeo se guardarían likes y reportes a números inventados.
 	 *
-	 * <p>Devuelve un booleano y no la reseña porque es lo único que se pregunta. Un registro sin
-	 * texto —solo puntaje— no es una reseña y no se puede destacar: lo que HU-17 destaca es lo que
-	 * alguien escribió.</p>
+	 * <p>Devuelve el autor y no un booleano desde D70: el botón de reportar es solo para reseñas
+	 * ajenas (HU-18) y el único que puede comprobarlo es quien también conoce la sesión. Un
+	 * registro sin texto —solo puntaje— no es una reseña: no se destaca ni se reporta, porque lo
+	 * que las dos cosas señalan es lo que alguien escribió.</p>
 	 */
-	boolean existeResenia(Long registroId);
+	Optional<Long> autorDeResenia(Long registroId);
+
+	/**
+	 * Borra el texto de una reseña y deja el registro donde está (HU-22, D40). Lo ordena el admin
+	 * desde la cola de reportes, y por eso no lleva {@code usuarioId}: no es el dueño quien borra
+	 * —para eso está {@link #borrar}— sino la moderación, y el candado de admin lo pone la capa de
+	 * aplicación (D61).
+	 *
+	 * <p>Lo ofensivo es el texto, no haber ido al teatro: la salida, su fecha y su puntaje quedan,
+	 * y el promedio de la producción (D20) no se mueve. Después de esto el registro deja de ser una
+	 * reseña: desaparece de las reseñas de la ficha, en el feed sigue estando —el feed son los
+	 * registros, con reseña o sin ella (D66)— pero sin texto, y no se le puede dar like.</p>
+	 *
+	 * <p>Silencioso si ese registro ya no está o si nunca tuvo texto: el estado que se pedía ya es
+	 * el que hay, y quien resuelve la cola no tiene por qué saber que el autor se le adelantó.</p>
+	 */
+	void borrarResenia(Long registroId);
+
+	/**
+	 * Los registros de esa lista de ids, con su autor al lado. La usa la cola de reportes (HU-22)
+	 * para mostrar qué texto se reportó y en qué obra fue —el contexto que pide la historia—, en
+	 * una sola consulta para la cola entera y no una por fila.
+	 *
+	 * <p>Devuelve {@link ActividadDeDiario} y no {@link RegistroDeDiario} porque quien pregunta
+	 * necesita también de quién es cada uno. Los ids que ya no existen no vuelven: un reporte
+	 * puede sobrevivir a la reseña que lo motivó, y la cola tiene que poder decirlo.</p>
+	 */
+	List<ActividadDeDiario> registrosPorIds(Collection<Long> registroIds);
 }

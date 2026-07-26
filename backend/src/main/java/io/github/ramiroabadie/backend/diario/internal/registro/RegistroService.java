@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -171,8 +172,33 @@ class RegistroService implements Diario {
 
 	@Override
 	@Transactional(readOnly = true)
-	public boolean existeResenia(Long registroId) {
-		return repositorio.existsByIdAndReseniaIsNotNull(registroId);
+	public Optional<Long> autorDeResenia(Long registroId) {
+		return repositorio.autorDeResenia(registroId);
+	}
+
+	/**
+	 * La mitad que le toca a Diario en la resolución de un reporte (HU-22): el veredicto lo anota
+	 * Social y el texto lo borra el dueño del dato. Sin excepción si no hay nada que borrar — el
+	 * autor pudo haberse adelantado (HU-11), y la cola tiene que poder vaciarse igual.
+	 */
+	@Override
+	@Transactional
+	public void borrarResenia(Long registroId) {
+		repositorio.findById(registroId).ifPresent(Registro::borrarResenia);
+	}
+
+	/**
+	 * El contexto de la cola de reportes (HU-22). Los títulos los pone {@link #actividad}, con una
+	 * sola consulta a Catálogo para toda la cola. Sin orden propio: quien pregunta ya tiene el
+	 * suyo —la cola ordena por reporte, no por registro— y busca cada uno por id.
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public List<ActividadDeDiario> registrosPorIds(Collection<Long> registroIds) {
+		if (registroIds.isEmpty()) {
+			return List.of();
+		}
+		return actividad(repositorio.findByIdIn(registroIds));
 	}
 
 	/**
