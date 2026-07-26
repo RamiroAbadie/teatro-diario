@@ -47,7 +47,7 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   Lo que a HU-07 le falta es pantalla: el resultado vacío que deriva a sugerir necesita HU-08
   (Fase 3) y la pantalla de resultados es Fase 4.
 
-## Fase 3 — Social (AHORA)
+## Fase 3 — Social (HECHA)
 
 - ~~Follow y feed compuesto (HU-15/16).~~ Hecho: nace el módulo Social con el grafo
   —seguir, dejar de seguir, contadores en el perfil— y el feed, que es la composición que
@@ -65,9 +65,17 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   de HU-20, o rechazar con un motivo que lee solo él. Con esto **HU-07 no tiene nada más que
   esperar del backend**: el resultado vacío ya tiene adónde derivar, y lo que queda es la
   pantalla (Fase 4). Decisión que hizo falta: D69.
-- Reportes: el botón (HU-18) y la cola del admin (HU-22).
+- ~~Reportes: el botón (HU-18) y la cola del admin (HU-22).~~ Hecho: lo que D40 agregó al alcance
+  congelado. Social suma su tercera capacidad —el aviso, que cuelga de la reseña como el like y
+  tampoco sabe qué es— y la cola del admin se vacía por dos puertas: borrar el texto reportado o
+  desestimar. Borrar se lleva la reseña y deja la salida al teatro con su fecha y su puntaje, así
+  que el promedio de D20 no se entera. Decisión que hizo falta: D70, que además reemplaza
+  `existeResenia` por `autorDeResenia` (amplía D68). **Con esto cierra la Fase 3, y con ella la
+  capa social entera (D3).** De las 22 historias, lo único que sigue esperando backend es la
+  subida de afiches de HU-20, que es de la Fase 5; a todas las demás lo que les falta son
+  pantallas.
 
-## Fase 4 — Frontend
+## Fase 4 — Frontend (AHORA)
 
 - Recién acá se abre la discusión de front (D55). Plan vigente: Next.js (ADR-003);
   se revisa al llegar si el fundador lo pide, como decisión explícita.

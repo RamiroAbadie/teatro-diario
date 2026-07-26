@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.ramiroabadie.backend.aplicacion.internal.ReseniaInexistenteException;
 import io.github.ramiroabadie.backend.aplicacion.internal.SesionActual;
 import io.github.ramiroabadie.backend.diario.Diario;
 import io.github.ramiroabadie.backend.social.LikesDeResenias;
@@ -69,8 +70,13 @@ class LikeController {
 		return ResponseEntity.noContent().build();
 	}
 
+	/**
+	 * Pregunta por el autor y usa solo si lo hay: al like no le importa quién escribió —darse like
+	 * a uno mismo está permitido (D68)—, pero al reporte sí (HU-18), y una sola pregunta a Diario
+	 * sirve a las dos (D70).
+	 */
 	private void exigirQueExista(Long reseniaId) {
-		if (!diario.existeResenia(reseniaId)) {
+		if (diario.autorDeResenia(reseniaId).isEmpty()) {
 			throw new ReseniaInexistenteException(reseniaId);
 		}
 	}
