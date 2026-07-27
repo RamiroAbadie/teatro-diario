@@ -7,16 +7,20 @@
 
 ## Inventario de pantallas (13 públicas + panel admin)
 
-| # | Pantalla | Ruta tentativa | SSR/OG | Historias |
+> Las rutas dejaron de ser tentativas: las fijan **D74** (el id es lo único que se parsea, el
+> slug es decorativo y su ausencia redirige `308` a la forma canónica) y **D75** (el perfil va
+> bajo `/usuario/`, porque la raíz colisiona con las rutas del producto).
+
+| # | Pantalla | Ruta | SSR/OG | Historias |
 |---|---|---|---|---|
 | 1 | Home visitante (landing + en cartel destacado) | `/` | Sí | HU-06 |
 | 2 | Home logueado (feed + accesos) | `/` | No hace falta | HU-16 |
-| 3 | Ficha de producción | `/obra/{slug}` | **Sí (crítico)** | HU-04, HU-14 |
-| 4 | Página de artista | `/artista/{slug}` | Sí | HU-05 |
-| 5 | Página de sala | `/sala/{slug}` | Sí | HU-04 (link) |
+| 3 | Ficha de producción | `/obra/{id}-{slug}` | **Sí (crítico)** | HU-04, HU-14 |
+| 4 | Página de artista | `/artista/{id}-{slug}` | Sí | HU-05 |
+| 5 | Página de sala | `/sala/{id}-{slug}` | Sí | HU-04 (link) |
 | 6 | En cartel | `/en-cartel` | Sí | HU-06 |
 | 7 | Búsqueda / resultados | `/buscar?q=` | No | HU-07 |
-| 8 | Perfil / diario de usuario | `/{username}` | **Sí (crítico)** | HU-03, HU-12, HU-13 |
+| 8 | Perfil / diario de usuario | `/usuario/{username}` | **Sí (crítico)** | HU-03, HU-12, HU-13 |
 | 9 | Gesto de registro (modal o página) | — | No | HU-09, HU-10 |
 | 10 | Sugerir producción | `/sugerir` | No | HU-08 |
 | 11 | Alta de cuenta / login | `/registro`, `/login` | No | HU-01, HU-02 |
@@ -85,6 +89,7 @@ se diseña para minimizar clics del admin, no para verse bien.
 |---|---|
 | Búsqueda sin resultados (producciones) | Mensaje + CTA a sugerir (HU-07) |
 | Acción que requiere login desde visitante | Redirige a login y **vuelve** a donde estaba con lo tipeado |
+| **Visitante anónimo, a secas** | **No es un error y no redirige a ningún lado**: la pantalla se dibuja en su versión sin sesión. El `401` con el que el frontend averigua si hay alguien no se muestra nunca (D78) |
 | 404 de ficha/perfil | Página propia con búsqueda embebida |
 | Error de servidor en el gesto de registro | El contenido tipeado NO se pierde (guardar en estado del cliente hasta confirmar) |
 | Sesión expirada en medio de una acción | Igual que login requerido: volver con contexto |

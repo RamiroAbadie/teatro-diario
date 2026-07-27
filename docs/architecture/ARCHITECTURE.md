@@ -51,7 +51,8 @@ prohibido cruzar límites por los costados).
   volumen en el MVP; almacenamiento de objetos si/cuando el costo o los backups lo
   justifiquen (se resuelve en Etapas 7–8).
 - Backups de la base: obligatorios desde el día uno de tener usuarios reales. Estrategia
-  concreta en Etapa 8.
+  concreta en Etapa 8 (D45). **El volumen de afiches lleva su propio backup, aparte**: el
+  `pg_dump` de la base no lo cubre (D77).
 
 ## Restricciones de contexto que esta arquitectura respeta
 

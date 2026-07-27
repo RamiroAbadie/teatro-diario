@@ -71,24 +71,81 @@ el catálogo completo. **Herramientas nuevas usadas: cero.**
   desestimar. Borrar se lleva la reseña y deja la salida al teatro con su fecha y su puntaje, así
   que el promedio de D20 no se entera. Decisión que hizo falta: D70, que además reemplaza
   `existeResenia` por `autorDeResenia` (amplía D68). **Con esto cierra la Fase 3, y con ella la
-  capa social entera (D3).** De las 22 historias, lo único que sigue esperando backend es la
-  subida de afiches de HU-20, que es de la Fase 5; a todas las demás lo que les falta son
-  pantallas.
+  capa social entera (D3).** De las 22 historias, a casi todas lo único que les falta son
+  pantallas. Lo que todavía espera backend son dos cosas, y las dos entran en la Fase 4: la
+  subida de afiches de HU-20 (D72, movida desde la Fase 5) y el `vecesQueLaVi` de HU-10 (D76),
+  que apareció al escribir `architecture/API.md`.
 
 ## Fase 4 — Frontend (AHORA)
 
-- Recién acá se abre la discusión de front (D55). Plan vigente: Next.js (ADR-003);
-  se revisa al llegar si el fundador lo pide, como decisión explícita.
-- Las pantallas de USER_FLOWS.md contra la API ya construida y probada.
+**Objetivo:** las pantallas de USER_FLOWS.md contra la API ya construida y probada. Next.js
+sin cambios (ADR-003/D55, revisado al llegar y confirmado). Vale la misma regla que hizo
+rápida la Fase 1: **antes de escribir pantallas, existe el documento que dice dónde va cada
+cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay que escribirlo.
+
+0. ~~**Los documentos que van antes de la primera pantalla**~~ **HECHO — el paso 0 está cerrado.**
+   En este orden:
+   ~~`architecture/API.md`~~ **hecho** (v1.2: el contrato HTTP, corregido contra el código en dos
+   revisiones) → ~~`architecture/FRONTEND_ARCHITECTURE.md`~~ **hecho** (v1.1, D78: carpetas,
+   rutas, servidor vs cliente, el único lugar donde vive el fetch, cómo viajan la sesión de D56 y
+   el token de D57) → ~~`product/DESIGN_SYSTEM.md`~~ **hecho** (v1.0, D79: tokens con el contraste
+   calculado, tema oscuro automático sin interruptor, los 10 componentes de `ui/`, los tres huecos
+   de D71 diseñados, cómo se dibuja cada nulo de la API y **a qué tamaño se ve un afiche, que es
+   lo que P16 estaba esperando**) → ~~`product/SCREEN_SPECS.md`~~ **hecho** (v1.0, D80: una entrada
+   por pantalla con sus datos, su composición, sus islas cliente y **los cuatro estados
+   obligatorios**; el gesto como hoja y no como ruta, y la matriz de cobertura de las 22 historias).
+   ~~Referencia de interfaz~~: cerrada en D71. **Lo que sigue es el punto 1: código.**
+1. Esqueleto de `/frontend` + Tailwind (D73) + el layout con la navegación y el botón de
+   registrar siempre presente (D71).
+2. Pantallas públicas con SSR y Open Graph: ficha, artista, sala, en cartel, home visitante
+   (HU-04/05/06). **Test de aceptación literal: pegar el link en WhatsApp y ver el preview.**
+3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas
+   que no cierran: la subida de afiches con redimensionado y versionado (HU-20, D72/D77,
+   adelantada desde la Fase 5), el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice`
+   que unifique las respuestas de error — hoy no hay ninguno y los formularios del admin no
+   devuelven errores por campo.
+   ⚠️ **La subida de afiches todavía no se puede empezar**: le falta una decisión, no código.
+   Con qué se decodifica, redimensiona y codifica la imagen es **P16**, y es una dependencia
+   nueva que D51 exige decidir y no adoptar — el JDK no escribe WebP y el `pom.xml` no tiene
+   ninguna librería de imágenes. **La mitad que dependía del diseño ya está**: D79 fijó las
+   dimensiones (caja de origen 1200×1600 **sin recortar**, un solo archivo, el recorte de la
+   grilla lo hace CSS), así que lo que queda de P16 es herramienta, formato, calidad, EXIF y
+   tope de píxeles decodificados.
+4. Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
+   gesto de registro con autocompletado y el desvío a sugerir sin perder lo tipeado
+   (HU-08/09/10), editar y borrar con confirmación (HU-11).
+5. Perfil/diario con estados vacíos y stats (HU-03/12/13), home logueada con el feed y su
+   aviso de fallback (HU-16), seguir (HU-15), likes y reportar (HU-17/18).
+6. Panel admin: las cuatro caras que ya tienen backend —salas, producciones con estados,
+   cola de sugerencias, cola de reportes (HU-19/21/22)— más el botón de fusionar duplicados
+   y su confirmación (D63).
+
+**Criterio de salida:** las 13 pantallas de USER_FLOWS.md existen con sus estados vacíos y
+de error; el flujo 3 (celular, 23:30, registrar en menos de un minuto) se puede hacer de
+punta a punta; el flujo 1 (link compartido → ficha → perfil → crear cuenta) también.
 
 ## Fase 5 — Deploy y beta
 
 - **Entra Flyway** (D53): baseline del esquema + `ddl-auto: validate`. Innegociable
   antes de datos reales.
 - Descongelar Dockerfiles + Caddy + Compose completo (ya escritos, están en el repo).
-  VPS, HTTPS, backups probados (D45).
-- Lo que le queda a HU-20: subida de afiches, y las pantallas de lo que ya tiene backend
-  —entre ellas el botón de fusionar duplicados y su confirmación (D63)—. Panel admin pulido.
+  VPS, HTTPS, backups probados (D45). **En Caddy entra `/afiches`** (D77): hoy el `Caddyfile`
+  reparte `/api` y nada más, así que hay que agregarle el `file_server` y montar el volumen
+  `uploads` **solo lectura** en el servicio `caddy` del compose, donde hoy solo lo monta
+  `backend`. En desarrollo esa ruta no la sirve Caddy ni Spring: los afiches salen de
+  `frontend/public/` (D78), y el rewrite local es solo para `/api`.
+- **Backup del volumen de afiches** (D77), que el `pg_dump` de D45 no cubre — son **dos backups
+  separados**: `pg_dump` respalda PostgreSQL, el volumen tiene el suyo. Sin el segundo, restaurar
+  deja el catálogo entero sin imágenes y la mecánica de compartir de ADR-003 no funciona.
+  **Las dos restauraciones se prueban antes de la beta**, no después. **La rutina nocturna para
+  el backend mientras corren las dos copias** (D77): con mutaciones de afiches en el medio,
+  ningún orden alcanza —un reemplazo entre el `pg_dump` y la copia del volumen borra el archivo
+  que el dump referencia—. Las dos copias se guardan y se restauran **como una pareja**, con la
+  misma marca de tiempo.
+- ~~Lo que le queda a HU-20: subida de afiches, y las pantallas de lo que ya tiene backend
+  —entre ellas el botón de fusionar duplicados y su confirmación (D63)—.~~ Todo eso se movió
+  a la Fase 4: los afiches por D72, las pantallas porque son pantallas. Acá queda el panel
+  admin pulido contra el uso real de la rutina semanal (D37).
 - Carga de las ~50 fichas (D38) + beta cerrada con espectadores reales (métricas de
   MVP_SCOPE.md).
 

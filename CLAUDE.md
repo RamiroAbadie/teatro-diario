@@ -15,9 +15,16 @@ Web app. Un solo desarrollador. Toda la documentación fundacional vive en `docs
 
 - Backend: Java 21 + Spring Boot, en `/backend`
 - Base de datos: PostgreSQL (corre local con `docker compose up -d postgres`)
-- Frontend: NO EXISTE TODAVÍA (D55) — no crear nada en /frontend ni proponer frameworks
+- Frontend: **Next.js (App Router) + Tailwind, en `/frontend`** — se abre en la Fase 4, que es
+  la actual. ADR-003 (Next) y D73 (Tailwind como única dependencia nueva: los componentes se
+  escriben a mano, sin librería de UI). D55 —"frontend fuera de la mesa"— **está cumplida y
+  cerrada**: era hasta tener el backend de catálogo funcionando, y lo está. Sigue vigente lo
+  otro: no proponer frameworks alternativos. **Dónde va cada cosa lo dice
+  `docs/architecture/FRONTEND_ARCHITECTURE.md` (D78), y el contrato con el backend,
+  `docs/architecture/API.md`** — los dos son de lectura obligatoria antes de escribir una pantalla
 - Esquema de DB: por ahora `ddl-auto: update` (D53). NO introducir Flyway hasta la fase
-  de deploy. NO agregar Spring Security hasta que se implemente el login (D52)
+  de deploy. Spring Security ya está (reentró en D56/D57 con HU-01/02): sesión con cookie
+  HTTP-only y CSRF activo
 
 ## Reglas innegociables de arquitectura
 

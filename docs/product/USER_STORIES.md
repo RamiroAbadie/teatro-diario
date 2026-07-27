@@ -23,8 +23,9 @@ ante credenciales inválidas (sin revelar cuál campo falló); logout invalida l
 
 **HU-03 · Ver perfil público** — Como visitante quiero ver el perfil de cualquier usuario
 (es la carta de presentación que se comparte).
-Criterios: URL `/{username}`; muestra diario, stats y reseñas; renderizado SSR con
-metadatos Open Graph (P13); accesible sin login (D21).
+Criterios: URL `/usuario/{username}` (D75, que corrige la forma que anotaba MD-4); muestra
+diario, stats y reseñas; renderizado SSR con metadatos Open Graph (P13); accesible sin
+login (D21).
 
 ---
 
@@ -151,7 +152,7 @@ desestimar reporte; ambas sacan el ítem de la cola.
 | MD-1 | Fecha del registro con 4 granularidades: día / mes-año / año / sin fecha | Cubre historial viejo (D18) sin complejidad de rangos |
 | MD-2 | Orden del diario: fechas difusas ordenan por su granularidad; sin-fecha va en sección aparte al final | Evita inventar fechas falsas |
 | MD-3 | Sin notificación de sugerencia aprobada ni de reporte resuelto: no existen notificaciones en el MVP | El primer consumidor real de eventos (ADR-002, peldaño 2) probablemente sea esto, en v1.1 |
-| MD-4 | El username es parte de la URL del perfil (`/{username}`) → validación URL-safe e inmutable en MVP | Simplifica; cambiar username queda post-MVP |
+| MD-4 | El username es parte de la URL del perfil → validación URL-safe e inmutable en MVP. ⚠️ **La forma se corrigió en D75**: `/usuario/{username}` y no `/{username}`, porque la raíz colisiona con las rutas del producto y obliga a una lista de reservados | Simplifica; cambiar username queda post-MVP |
 
 ## Cobertura
 

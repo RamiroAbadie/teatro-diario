@@ -23,7 +23,7 @@
 | **Servidor** | VPS chico (referencia: Hetzner, ~USD 5-6/mes) | Justificado por P9 contra free tiers de PaaS con evidencia: apagado por inactividad (arranques de 30+ s) y bases gratuitas que expiran. Un servidor, una factura |
 | **Contenedores** | Docker Compose: app Spring + app Next + Postgres + Caddy | D35. Sin orquestación |
 | **Reverse proxy** | **Caddy** | HTTPS automático (Let's Encrypt), configuración mínima |
-| **Backups** | `pg_dump` nocturno → Cloudflare R2 (10 GB gratis) | **Obligatorios desde el primer usuario real.** Restauración probada al menos una vez antes del lanzamiento |
+| **Backups** | **Dos, separados**: `pg_dump` nocturno → Cloudflare R2 para PostgreSQL, y una copia propia del **volumen de afiches**, que el `pg_dump` no toca (D77) | **Obligatorios desde el primer usuario real.** Las **dos** restauraciones —base y volumen— se prueban al menos una vez antes del lanzamiento: sin la segunda, restaurar deja el catálogo entero sin imágenes |
 | **Observabilidad** | Logs a stdout (`docker logs`) + UptimeRobot (gratis) | Nada más hasta que duela. Métricas/APM: peldaño futuro con problema concreto |
 | **CI** | GitHub Actions (gratis en repos públicos) | Build + tests en cada PR |
 
