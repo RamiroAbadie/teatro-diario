@@ -1,9 +1,11 @@
 # Design System
 
-> Estado: v1.0 — tercero de los cuatro documentos del paso 0 de la Fase 4, después de
+> Estado: v1.1 — tercero de los cuatro documentos del paso 0 de la Fase 4, después de
 > `architecture/API.md` (v1.2) y `architecture/FRONTEND_ARCHITECTURE.md` (v1.1). El que sigue
-> es `product/SCREEN_SPECS.md` (v1.0, D80), que cierra el paso.
-> Lo respalda **D79**.
+> es `product/SCREEN_SPECS.md` (v1.1, D80/D81), que cierra el paso.
+> Lo respalda **D79**, y la v1.1 **D81**: el armazón de cuatro piezas trae los valores de la
+> barra de destinos y **sube la lista de íconos de seis a diez**. Los tokens, la paleta, la escala
+> y los diez componentes de `ui/` **no cambian**.
 >
 > **Qué decide:** los tokens (color, tipografía, espacio, radios, sombras, breakpoints), los
 > componentes de `components/ui/`, cómo se dibujan los casos degradados que la API sí devuelve,
@@ -155,7 +157,7 @@ logo, la fuente de títulos es un token y cambia una línea.
 
 | Clase | px / interlínea | Rol |
 |---|---|---|
-| `text-xs` | 12 / 16 | chips, metadatos densos del panel admin. **Piso absoluto: nada por debajo** |
+| `text-xs` | 12 / 16 | chips, metadatos densos del panel admin, **etiquetas de la barra de destinos** (D81). **Piso absoluto: nada por debajo** |
 | `text-sm` | 14 / 20 | meta de una fila (fecha, sala, contadores), etiquetas de formulario |
 | `text-base` | 16 / 24 | cuerpo: reseñas, sinopsis, inputs. **Piso del texto que se lee** |
 | `text-lg` | 18 / 28 | título de una fila destacada, nombre de usuario en la cabecera del perfil |
@@ -195,6 +197,18 @@ La escala de Tailwind (4 px), restringida a **1, 2, 3, 4, 6, 8, 12, 16** (4, 8, 
 | Panel admin | `max-w-7xl` (1280) | tablas: acá el ancho es la herramienta (Flujo 4) |
 | Cuerpo de texto | `max-w-[65ch]` | reseñas y sinopsis, dentro de cualquiera de los de arriba |
 
+**El bloque inferior del armazón** (D81), que es lo único del sistema con medidas propias porque
+es lo único que se reparte el ancho de la pantalla en celdas iguales:
+
+| | Valor |
+|---|---|
+| Padding del bloque | `pt-2 px-4 pb-3` + `pb-[env(safe-area-inset-bottom)]` |
+| Separación botón ↔ barra | **`border-top` de 1 px en `borde`**, no un margen (la misma regla que separa filas) |
+| Ancho de celda en 360 | **82 px** con sesión (328 ÷ 4) · 109 px sin ella (328 ÷ 3) |
+| Alto del objetivo táctil | **48 px**, por encima del piso de 44 de acá abajo |
+| Etiqueta | **`text-xs`**, con el ícono arriba; nunca ícono solo |
+| Cromo fijo total en 360×640 | **~178 px**, con ~460 px de contenido. Es el costo que D81 acepta y anota |
+
 ### Radios, sombras y bordes
 
 | Token | Valor | Dónde |
@@ -233,9 +247,26 @@ Los de Tailwind, y se usan **dos y medio**:
 - **Objetivos táctiles: 44 px de alto** para todo control primario (botones, filas de la escala de
   puntaje, ítems de una lista tocable). El piso absoluto es **24×24 px** (WCAG 2.5.8, AA) y sólo
   se usa en el panel admin, que se opera con mouse (Flujo 4).
-- **Íconos: SVG en línea escritos a mano, y no más de seis** (buscar, corazón, aviso, cruz,
-  cheurón, más). No entra ninguna librería de íconos: sería la dependencia que D73 dejó afuera.
-  Ningún ícono viaja solo sin etiqueta accesible.
+- **Íconos: SVG en línea escritos a mano, y no más de diez** (buscar, corazón, aviso, cruz,
+  cheurón, más, **hamburguesa, casa, cartel y tres puntos**). No entra ninguna librería de íconos:
+  sería la dependencia que D73 dejó afuera. **Ningún ícono viaja solo sin etiqueta accesible.**
+
+  La lista era de seis y **D81 la lleva a diez**. De dónde sale cada uno de los cuatro que entran:
+
+  | Ícono | Para qué | Por qué se agrega |
+  |---|---|---|
+  | **hamburguesa** | disparador del menú principal, junto a la palabra "Menú" | D81 |
+  | **casa** | celda "Feed" / "Inicio" de la barra de destinos | D81 |
+  | **cartel** (rectángulo con cabecera) | celda "En cartel" de la barra | D81 |
+  | **tres puntos** | menú de acciones de una fila del feed y de una reseña | **ya lo pedía `SCREEN_SPECS.md`** (pantallas 2 y 3) y nunca entró en la lista de seis: **es una corrección, no un agregado** |
+
+  Las otras dos celdas de la barra **no estrenan ícono**: "Buscar" usa la lupa que ya estaba y
+  **"Mi diario" usa el monograma del componente `Usuario`**, que ya existe.
+
+- **El destino activo de la barra no se marca sólo con color**: lleva **regla de 2 px en `acento`
+  sobre el borde superior de la celda + `font-medium` + texto en `acento-tinta`**. Es la misma
+  regla de accesibilidad que ya vale para las 13 pantallas —lo que llega por color lleva además
+  otra señal—, y acá se anota porque una barra de navegación es donde más fácil se rompe.
 
 ## Tema oscuro: **sí, automático, sin interruptor**
 
@@ -288,6 +319,13 @@ ahí pierde todo lo que sabía del dominio. Estos diez ya nacen arriba porque la
 repiten. **La escala de 1-10 del gesto no está en esta lista** justamente por esa regla: hoy la
 usa una sola pantalla (el gesto, en crear y en editar, que es el mismo formulario), así que vive
 en `components/diario/` hasta que otra la necesite.
+
+⚠️ **Por la misma regla, el menú principal y la barra de destinos de D81 no entran en esta lista y
+el listado sigue siendo de diez.** Parece que los usan las 13 pantallas, pero no: **los usa el
+layout, una sola vez, para todas.** Un componente sube a `ui/` cuando lo repite una segunda
+pantalla, y acá no hay repetición sino un armazón que envuelve. Van en **`components/layout/`**
+(`FRONTEND_ARCHITECTURE.md`), y sí usan `Boton`, `Usuario` y los íconos de este documento, que es
+todo lo que necesitan de arriba.
 
 En las tablas: **V** = variantes, **E** = estados.
 
@@ -652,8 +690,9 @@ Sin i18n: **castellano rioplatense, voseo, una sola persona escribiendo** (`FRON
 
 ## Lo que este documento NO trae, y dónde está
 
-- **Las pantallas una por una**, con su composición y sus llamadas: `SCREEN_SPECS.md` (v1.0, D80),
-  que es el que cierra el paso 0 de la Fase 4.
+- **Las pantallas una por una**, con su composición y sus llamadas: `SCREEN_SPECS.md` (v1.1,
+  D80/D81), que es el que cierra el paso 0 de la Fase 4 — y donde vive el armazón completo: el
+  contenido del menú principal por sesión y por rol, y las celdas de la barra de destinos.
 - **El código de los componentes**: se escribe con el esqueleto de `/frontend` (paso 1).
 - **Cualquier herramienta nueva**: no hay ninguna. Ni librería de UI (D73), ni de íconos, ni de
   animación, ni webfonts, ni generador de tokens.

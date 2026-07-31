@@ -8,7 +8,8 @@
 > imprevisto, no había que decidir dónde ponerlo— y el frontend no tenía nada equivalente.
 >
 > Lo respalda **D78**. El contrato con el backend es `API.md`; los tokens y componentes son
-> `product/DESIGN_SYSTEM.md` (v1.0, D79) y las pantallas `product/SCREEN_SPECS.md` (v1.0, D80).
+> `product/DESIGN_SYSTEM.md` (v1.1, D79/D81) y las pantallas `product/SCREEN_SPECS.md`
+> (v1.1, D80/D81).
 > **Con esos cuatro, el paso 0 de la Fase 4 está cerrado** (ROADMAP).
 
 ## Las cinco reglas innegociables
@@ -32,7 +33,9 @@ Si una sola cosa se lee de este documento, que sean estas. El resto es detalle:
 ```
 frontend/
   app/                          rutas (App Router). Una carpeta = una URL
-    layout.tsx                  nav + botón de registrar siempre presente (D71)
+    layout.tsx                  el armazón de cuatro piezas (D81): cabecera, menú principal,
+                                bloque inferior (botón de registrar siempre presente, D71 +
+                                barra de destinos) y pie. Resuelve la sesión una sola vez
     page.tsx                    home: feed si hay sesión, landing si no
     obra/[slug]/page.tsx        ficha — SSR + Open Graph (crítico)
     artista/[slug]/page.tsx
@@ -47,6 +50,9 @@ frontend/
   components/
     ui/                         los 10 de DESIGN_SYSTEM.md (D79): tarjeta, fila, afiche,
                                 puntaje, chip, usuario, botón, estado vacío, aviso, confirmación
+    layout/                     el armazón, y sólo lo usa layout.tsx (D81):
+                                Cabecera.tsx, MenuPrincipal.tsx, BloqueInferior.tsx,
+                                BarraDestinos.tsx
     <dominio>/                  compuestos: FichaCabecera, FilaDeDiario, ItemDeFeed...
   lib/
     api/                        ← el ÚNICO lugar con fetch
@@ -64,6 +70,31 @@ que pensar. Es el mismo mecanismo de aviso que dio MODULE_MAP en la Fase 1.
 
 **Un componente nace en la carpeta de su dominio.** Sube a `ui/` recién cuando lo usa una
 segunda pantalla, y ahí pierde todo lo que sabía del dominio: `ui/` no conoce producciones.
+
+**`components/layout/` es la excepción que confirma esa regla, no un agujero en ella** (D81). El
+menú principal y la barra de destinos parecen candidatos obvios a `ui/` porque se ven en las 13
+pantallas, pero **los usa `app/layout.tsx` una sola vez, para todas**: no hay una segunda pantalla
+que los repita, que es lo que la regla mide. Van acá, y **el listado de diez de `DESIGN_SYSTEM.md`
+no cambia**. `BloqueInferior.tsx` es el contenedor fijo de abajo —el botón persistente arriba, la
+barra debajo, con el `border-top` y el `env(safe-area-inset-bottom)`— y existe porque esas dos
+piezas comparten posicionamiento y área segura: separarlas obliga a repetir el fijado en dos
+lugares y a mantenerlos sincronizados a mano. La barra y el menú son **islas cliente** (necesitan
+la ruta activa y el estado de abierto/cerrado); la cabecera y el bloque, no.
+
+⚠️ **La sesión se sigue resolviendo una sola vez, en el layout**, con `GET /api/auth/yo` por
+`apiSession` — el armazón nuevo **no agrega ni una llamada** ni pide una librería de estado
+global. De esa única respuesta salen las tres cosas que dependen de ella:
+
+| Qué | Con sesión | Sin sesión |
+|---|---|---|
+| Etiqueta del botón persistente | "Registrar" (abre la hoja del gesto) | "Creá tu diario" (va a `/registro`) |
+| Celda **"Mi diario"** de la barra | sí, con el monograma de `Usuario` | **no existe**, y "Feed" se llama "Inicio" |
+| Sección **Panel** del menú principal | sólo si `rol === "ADMIN"` | no |
+
+Su `401` no se muestra y no navega (es "anónimo", la tabla de errores de más abajo), así que **el
+armazón del visitante se dibuja con el mismo camino de código y sin ningún estado de carga**. Y el
+menú principal es un `<dialog>` con las reglas de siempre —foco, `Esc`, clic afuera, y
+`pushState`/`popstate` para que "atrás" lo cierre—, sin dependencia nueva (D73).
 
 ## Rutas y URLs (D74/D75)
 

@@ -1,9 +1,11 @@
 # Screen Specs
 
-> Estado: v1.0 — **cierra el paso 0 de la Fase 4**. Es el cuarto y último de los documentos que
+> Estado: v1.1 — **cierra el paso 0 de la Fase 4**. Es el cuarto y último de los documentos que
 > van antes de la primera pantalla, después de `architecture/API.md` (v1.2),
-> `architecture/FRONTEND_ARCHITECTURE.md` (v1.1) y `product/DESIGN_SYSTEM.md` (v1.0).
-> Lo respalda **D80**.
+> `architecture/FRONTEND_ARCHITECTURE.md` (v1.1) y `product/DESIGN_SYSTEM.md` (v1.1).
+> Lo respalda **D80**, y la v1.1 **D81**: el armazón pasa de tres piezas a cuatro (menú principal
+> y barra de destinos), que es lo único que cambió — ninguna pantalla nueva, el alcance sigue
+> congelado.
 >
 > **Qué es:** una entrada por cada una de las 13 pantallas de `USER_FLOWS.md` (más las cinco
 > caras del panel), con qué datos pide, cómo se compone, qué isla es cliente y **qué se ve en
@@ -33,12 +35,15 @@ Convenciones de las tablas:
 
 ### El armazón: `app/layout.tsx`
 
-Tres piezas, presentes en todas las pantallas salvo el panel:
+**Cuatro piezas**, presentes en todas las pantallas salvo el panel (D81). La de abajo es **un
+bloque con dos partes** —el botón persistente y, debajo, la barra de destinos— y por eso se cuenta
+como una sola pieza: se dibujan juntas, se fijan juntas y comparten el padding y el área segura.
 
 | Pieza | Celular | ≥`md` |
 |---|---|---|
-| **Cabecera** | título/marca a la izquierda (hoy sólo texto: P2 sigue abierto), lupa a la derecha | ídem, más el buscador desplegado y el menú de cuenta |
-| **Acción persistente** | **barra fija abajo** con el botón primario, `pb-[env(safe-area-inset-bottom)]` | botón en la cabecera, a la derecha |
+| **Cabecera** | botón **"Menú"** a la izquierda (hamburguesa + la palabra escrita), título/marca al lado (hoy sólo texto: P2 sigue abierto), lupa a la derecha | **sin botón de menú**: título/marca, el buscador desplegado, **los destinos**, el menú de cuenta y el botón de registrar |
+| **Menú principal** | panel **a pantalla completa** que abre el botón de la cabecera, con los destinos agrupados por categoría | **no se dibuja** |
+| **Bloque inferior** | **fijo abajo**: arriba el botón primario persistente, debajo la **barra de destinos** (4 celdas con sesión, 3 sin ella), `pb-[env(safe-area-inset-bottom)]` | **no hay bloque fijo**: el botón va en la cabecera, a la derecha, y los destinos también viven en la cabecera |
 | **Pie** | links mínimos: en cartel, buscar, y el link al repo (AGPL, D46) | ídem |
 
 ⚠️ **El botón persistente cambia de identidad según la sesión, y eso resuelve un problema de
@@ -56,7 +61,78 @@ esa pantalla necesitaba igual (hueco 2 de USER_FLOWS). Un solo control, dos prod
 La sesión se resuelve **una sola vez, en el layout**, con `GET /api/auth/yo` por `apiSession`
 (`FRONTEND_ARCHITECTURE.md`: no hay librería de estado global; la sesión baja del servidor). Su
 `401` **no se muestra y no navega**: es "anónimo", que es el estado de la mayoría de las visitas.
-El acceso al panel se dibuja sólo si `rol === "ADMIN"`.
+De esa única respuesta salen **las tres cosas del armazón que dependen de la sesión**: la etiqueta
+del botón persistente, si la barra tiene celda **"Mi diario"**, y si el menú principal dibuja la
+sección **Panel** —que va sólo si `rol === "ADMIN"`—.
+
+### El bloque inferior (celular)
+
+De arriba hacia abajo: **el botón persistente** —el de la tabla de acá arriba, sin ningún cambio: un
+`Boton` primario de 44 px, con texto, con sus dos identidades— y **debajo la barra de destinos**.
+Ese orden es la decisión, no un detalle de maquetado: el CTA de adquisición tiene que seguir siendo
+texto que cambia según la sesión, así que no puede convertirse en una celda de la barra (D81).
+
+| | Con sesión | Sin sesión |
+|---|---|---|
+| Celdas | 4: **Feed · En cartel · Buscar · Mi diario** | 3: **Inicio · En cartel · Buscar** |
+| Ancho de celda en 360 | **82 px** (360 − 32 de padding lateral = 328, ÷ 4) | 109 px (328 ÷ 3) |
+| Alto del objetivo | **48 px**, por encima del piso de 44 de `DESIGN_SYSTEM.md` | ídem |
+| Etiqueta | **`text-xs` (12 px)**, que es el piso de la escala y **no baja de ahí** | ídem |
+| Destino activo | **regla de 2 px en `acento` sobre el borde superior de la celda** + `font-medium` + texto en `acento-tinta`. **No se marca sólo con color** | ídem |
+| Inactivo | ícono y etiqueta en `tinta-suave` | ídem |
+| Separación | `border-top` de 1 px en `borde` entre el botón y la barra | ídem |
+| Padding del bloque | `pt-2 px-4 pb-3` + `pb-[env(safe-area-inset-bottom)]` | ídem |
+
+⚠️ **Dos diferencias del anónimo, y las dos tienen motivo:** **"Mi diario" no existe sin sesión**
+—no hay diario que mostrar— y **"Feed" se llama "Inicio"**, porque sin cookie esa ruta es la
+pantalla 1 y no la 2. Los íconos: casa, cartel y lupa; **"Mi diario" no estrena ícono**, usa el
+monograma del componente `Usuario`, que ya existe.
+
+**El costo de espacio, escrito y no estimado:** en un celular de 360×640 el cromo fijo pasa de
+~128 px a **~178 px**, y quedan **~460 px de contenido**. Consecuencia concreta a verificar al
+escribir la pantalla 3: con el afiche a 60 vh, el título aterriza justo en el pliegue.
+
+### El menú principal (celular)
+
+**Disparador:** botón en la cabecera, a la izquierda, con **ícono hamburguesa + la palabra
+"Menú"** — la etiqueta va escrita, no es sólo el ícono. Con el panel abierto, el mismo disparador
+pasa a decir **"Cerrar"** con la cruz.
+
+**Forma:** panel a pantalla completa en un **`<dialog>` nativo**, con las mismas reglas que la hoja
+del gesto (D73, y la sección "Diálogos y hojas" de acá abajo): captura de foco, `Esc` y clic afuera
+cierran, y **abrir empuja una entrada al historial para que "atrás" cierre** en vez de sacar al
+usuario de la pantalla. **No entra desplazándose**: la única animación de posición del sistema
+sigue siendo la hoja del gesto (D79).
+
+**Contenido con sesión**, agrupado por categoría:
+
+| Categoría | Ítems |
+|---|---|
+| **Vos** | Mi diario · Sugerir una obra · Salir |
+| **Descubrir** | En cartel · Buscar |
+| **El proyecto** | Código (AGPL, D46) |
+| **Panel** — sólo si `rol === "ADMIN"` | Sugerencias · Reportes · Producciones · Salas · Personas |
+
+**Sin sesión el menú tiene dos ítems y ninguna categoría: Entrar** y **Código (AGPL)**. **"Crear
+cuenta" no va**: ya es el botón persistente, y repetirlo sería un segundo CTA de adquisición, que
+el criterio transversal de las pantallas 1, 3, 4, 6 y 8 prohíbe (la sección que sigue).
+
+⚠️ **La sección del panel no lleva contadores**, ni "7 sugerencias" ni "2 reportes": el contrato de
+`API.md` no los devuelve. Si más adelante se quieren, es trabajo de backend y se anota como
+pendiente; **no se resuelve en el cliente pidiendo las dos colas para contar filas** (D34).
+
+**Que "Mi diario", "En cartel" y "Buscar" estén en la barra y también en el menú es a propósito**
+(D81): **la barra es para el pulgar dentro de una sesión y el menú es el mapa completo del
+producto.** El que recién llega abre el menú y ve todo; el intensivo no lo abre nunca y llega a lo
+suyo en un toque. El costo asumido es el otro lado: los tres ítems que **sólo** viven en el menú
+—Sugerir, Salir, Código— son menos descubribles. Ninguno es parte del camino feliz, y a "Sugerir"
+se llega igual por su camino natural: la última opción del autocompletado del gesto, que está
+siempre (D7/D24, pantalla 9).
+
+**En ≥`md` no hay ni menú principal ni barra de destinos**, y conviene que quede sin ambigüedad:
+la cabecera ancha ya tiene el buscador desplegado, el menú de cuenta y el botón de registrar, así
+que **los destinos van en la cabecera** y no hay nada que plegar. El bloque inferior tampoco
+existe: el botón persistente vuelve a la cabecera, a la derecha, como ya decía la tabla.
 
 ### El CTA de crear cuenta en pantallas públicas
 
@@ -67,7 +143,8 @@ final del scroll**: el visitante que sólo mira es la mitad del Flujo 1 y molest
 
 ### Diálogos y hojas
 
-Todo lo que se superpone —la hoja del gesto y el `Confirmacion` de `DESIGN_SYSTEM.md`— usa el
+Todo lo que se superpone —la hoja del gesto, el `Confirmacion` de `DESIGN_SYSTEM.md` y el menú
+principal del armazón (D81)— usa el
 elemento **`<dialog>` nativo**: trae la captura de foco, el `Esc`, el fondo inerte y la capa
 superior sin una línea de JavaScript ni una dependencia (D73). Además:
 
@@ -630,7 +707,7 @@ ninguna historia construye, hay un hueco).
 
 | HU | Pantallas | Estado |
 |---|---|---|
-| HU-01 · HU-02 | 11, + el menú de cuenta del armazón | completa |
+| HU-01 · HU-02 | 11, + el menú de cuenta del armazón en ≥`md` y **el menú principal en el celular** (D81: ahí vive "Entrar" y "Salir") | completa |
 | HU-03 | 8 | completa |
 | HU-04 | 3, + 5 (link a sala) | ⏳ el afiche y su OG dependen de D77/P16 |
 | HU-05 | 4 | completa |
@@ -667,3 +744,9 @@ bloquea el cierre de una historia es backend, no diseño: `vecesQueLaVi` (D76) y
    tamaños ya los fijó D79.
 4. **El `@ControllerAdvice` que falta** (hueco 2 de `API.md`): mientras no exista, la validación
    fina del panel es del cliente. Está en el ROADMAP como trabajo de backend de esta fase.
+5. **Lo que cuesta el armazón de cuatro piezas** (D81). En un celular de 360×640 el cromo fijo
+   pasa de ~128 px a **~178 px** y quedan **~460 px de contenido**. Está aceptado, pero deja una
+   **verificación pendiente y concreta: la ficha (pantalla 3) con el afiche a 60 vh contra el
+   cromo nuevo** — con esa altura el título aterriza justo en el pliegue. Se mide al escribir la
+   ficha, y si no entra, lo que se ajusta es el máximo del afiche: la barra no se achica por
+   debajo de los 48 px ni la etiqueta por debajo de `text-xs`.

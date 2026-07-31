@@ -27,6 +27,15 @@
 | 12 | Panel admin (salas, producciones, sugerencias, reportes) | `/admin/...` | No | HU-19..22 |
 | 13 | Error 404 / genérico | — | — | transversal |
 
+> ⚠️ **Tres caminos son del armazón y no de una pantalla, así que no están en esta tabla y no
+> hay que buscarlos acá: el acceso al diario propio, a sugerir una obra y a salir.** Los tres
+> viven en el menú principal que abre la cabecera; **"Mi diario" está además en la barra de
+> destinos**, y **a sugerir se llega además por la última opción del autocompletado del gesto**
+> (D7/D24). Lo especifica D81, en `SCREEN_SPECS.md` → "El armazón". Queda
+> escrito porque son historias que existen —HU-12, HU-08, HU-02— y ninguna pantalla del
+> inventario construye su entrada: sin esta línea, parecen huecos y no lo son. **El inventario
+> sigue siendo de 13** y el hueco 3 sigue cerrado: no hay pantalla de ajustes.
+
 ## Flujo 1 — El visitante que llega por un link compartido (el flujo de crecimiento)
 
 ```
