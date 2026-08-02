@@ -1,22 +1,13 @@
 package io.github.ramiroabadie.backend.aplicacion.internal.curaduria;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import io.github.ramiroabadie.backend.aplicacion.internal.SesionActual;
@@ -54,29 +45,5 @@ class SugerenciaController {
 			Authentication autenticado) {
 		return ResponseEntity.status(HttpStatus.CREATED).body(SugerenciaResponse.desde(
 				sugerencias.recibir(sesion.id(autenticado), req.aNuevaSugerencia())));
-	}
-
-	/**
-	 * Campo y mensaje, igual que el alta de cuenta y el gesto de registro: los tres son formularios
-	 * que llena una persona, y un 400 sin decir dónde está el error obliga a adivinar.
-	 */
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ProblemDetail datosInvalidos(MethodArgumentNotValidException ex) {
-		Map<String, String> porCampo = new LinkedHashMap<>();
-		for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-			porCampo.putIfAbsent(error.getField(), error.getDefaultMessage());
-		}
-		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-				"Revisá los datos de la sugerencia");
-		problema.setProperty("errores", porCampo);
-		return problema;
-	}
-
-	/** La sesión sigue viva pero la cuenta se borró: para quien escribe es no estar logueado. */
-	@ExceptionHandler(AuthenticationException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ProblemDetail sesionSinCuenta(AuthenticationException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
 	}
 }

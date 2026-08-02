@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -88,12 +87,5 @@ class SeguimientoController {
 	@ResponseStatus(HttpStatus.NO_CONTENT)
 	public void yaLoSeguia(DataIntegrityViolationException ex) {
 		// sin cuerpo: 204
-	}
-
-	/** La sesión sigue viva pero la cuenta se borró: para quien escribe es no estar logueado. */
-	@ExceptionHandler(AuthenticationException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ProblemDetail sesionSinCuenta(AuthenticationException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
 	}
 }

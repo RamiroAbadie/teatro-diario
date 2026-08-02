@@ -1,6 +1,7 @@
 package io.github.ramiroabadie.backend.aplicacion.internal.diario;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import org.springframework.http.HttpStatus;
@@ -59,9 +60,10 @@ class OpinionesController {
 	 * Una producción que existe pero que nadie registró todavía responde con promedio nulo y la
 	 * lista vacía: la ficha recién estrenada también tiene que poder mostrarse.
 	 *
-	 * <p>La ficha se lee sin cuenta (D21) y lo único que cambia si la hay es el estado del botón
-	 * de like, igual que el de seguir en el perfil (D67): los contadores son los mismos para
-	 * todos, y sin sesión no hay botón que dibujar.</p>
+	 * <p>La ficha se lee sin cuenta (D21) y lo único que cambia si la hay son las dos cosas que
+	 * son de a uno: el estado del botón de like, igual que el de seguir en el perfil (D67), y
+	 * cuántas veces la vio quien mira (HU-10, D76). Los contadores son los mismos para todos, y
+	 * sin sesión no hay botón que dibujar ni a quién contarle nada.</p>
 	 */
 	@GetMapping("/{id}/opiniones")
 	public OpinionesResponse opiniones(@PathVariable Long id, Authentication autenticado) {
@@ -76,11 +78,11 @@ class OpinionesController {
 		List<Long> resenias = opiniones.resenias().stream()
 				.map(ReseniaDeProduccion::registroId)
 				.toList();
-		Set<Long> mios = sesion.idSiEstaLogueado(autenticado)
-				.map(yo -> likes.conLikeDe(yo, resenias))
-				.orElse(null);
+		Optional<Long> yo = sesion.idSiEstaLogueado(autenticado);
+		Set<Long> mios = yo.map(quien -> likes.conLikeDe(quien, resenias)).orElse(null);
+		Long vecesQueLaVi = yo.map(quien -> diario.vecesRegistrada(quien, id)).orElse(null);
 		return OpinionesResponse.desde(opiniones, usuarios.porIds(autores),
-				likes.contarPorResenia(resenias), mios);
+				likes.contarPorResenia(resenias), mios, vecesQueLaVi);
 	}
 
 	@ExceptionHandler(ProduccionInexistenteException.class)

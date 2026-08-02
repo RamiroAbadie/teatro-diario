@@ -20,15 +20,18 @@ import io.github.ramiroabadie.backend.identidad.UsuarioPublico;
  * misma lista de reseñas. Si la cuenta se borró, la reseña queda sin autor antes que
  * desaparecer.</p>
  */
-record OpinionesResponse(Double promedio, long cantidadRatings, List<Resenia> resenias) {
+record OpinionesResponse(Double promedio, long cantidadRatings, Long vecesQueLaVi, List<Resenia> resenias) {
 
 	/**
 	 * @param likes cuántos likes tiene cada reseña; las que no tienen ninguno no vienen en el mapa
 	 * @param mios las reseñas que ya tienen el like de quien mira, o {@code null} si no hay sesión
+	 * @param vecesQueLaVi cuántas veces la vio quien mira (HU-10, D76), o {@code null} si no hay
+	 * sesión. {@code 0} y {@code null} son dos cosas distintas y dibujan distinto: "todavía no la
+	 * viste" contra "no hay nadie a quien decírselo" — la misma convención que {@code leDiLike}
 	 */
 	static OpinionesResponse desde(OpinionesDeProduccion opiniones, Map<Long, UsuarioPublico> autores,
-			Map<Long, Long> likes, Set<Long> mios) {
-		return new OpinionesResponse(opiniones.promedio(), opiniones.cantidadRatings(),
+			Map<Long, Long> likes, Set<Long> mios, Long vecesQueLaVi) {
+		return new OpinionesResponse(opiniones.promedio(), opiniones.cantidadRatings(), vecesQueLaVi,
 				opiniones.resenias().stream()
 						.map(resenia -> Resenia.desde(resenia, autores.get(resenia.usuarioId()),
 								likes.getOrDefault(resenia.registroId(), 0L),

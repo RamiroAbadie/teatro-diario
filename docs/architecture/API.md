@@ -1,6 +1,12 @@
 # API
 
-> Estado: v1.2 — escrito al abrir la Fase 4 y corregido en dos revisiones (la segunda: el feed
+> Estado: v1.3 — el paso 3 de la Fase 4 (lo que le quedaba al backend) cierra dos de los tres
+> huecos que este documento tenía anotados: **`vecesQueLaVi` existe** —se le cae el ⏳— y **el
+> manejo global de errores también**, así que la sección de errores se reescribe: donde había
+> tres familias que el frontend tenía que tolerar, ahora hay una sola (D87). Queda el ⏳ de los
+> afiches. Lo anterior no cambia.
+>
+> La v1.2 se escribió al abrir la Fase 4 y se corrigió en dos revisiones (la segunda: el feed
 > separado de los `GET` abiertos personalizados, la nulabilidad real de la cola de reportes, las
 > dos formas del `409` del alta y el contrato inmutable de los afiches).
 > **Es el contrato que consume el frontend**: las formas de respuesta vivían solo en los
@@ -9,11 +15,11 @@
 > Regla de mantenimiento: si cambia un DTO, cambia este documento **en el mismo PR**. Un
 > contrato desactualizado es peor que ninguno, porque se le cree.
 
-**⏳ = decidido pero todavía no implementado.** Son dos cosas, las dos de la Fase 4 y las dos con
-decisión en el log: los afiches —sus dos endpoints y el campo `aficheUrl` en la ficha y en el
-resumen (D72/D77)— y `vecesQueLaVi` (D76). Están acá porque el frontend se diseña contra el
-contrato acordado, pero **hoy no responden**: la pantalla que las use no anda hasta que el
-backend las tenga. Lo que no lleva ⏳ está implementado y verificado contra el código.
+**⏳ = decidido pero todavía no implementado.** Queda una sola cosa, de la Fase 4 y con decisión
+en el log: los afiches —sus dos endpoints y el campo `aficheUrl` en la ficha y en el resumen
+(D72/D77)—. Está acá porque el frontend se diseña contra el contrato acordado, pero **hoy no
+responde**: la pantalla que lo use no anda hasta que el backend lo tenga. Lo que no lleva ⏳ está
+implementado y verificado contra el código.
 
 ## Convenciones transversales
 
@@ -46,7 +52,7 @@ hace que se le sirva a alguien la página de otro:
 
 | Endpoint abierto y personalizado | Qué agrega la sesión |
 |---|---|
-| `GET /api/producciones/{id}/opiniones` | `leDiLike` en cada reseña y `vecesQueLaVi` ⏳ |
+| `GET /api/producciones/{id}/opiniones` | `leDiLike` en cada reseña y `vecesQueLaVi` |
 | `GET /api/usuarios/{username}` | `loSigo` |
 
 **`GET /api/feed` no es de esta familia y no hay que contarlo entre ellos**: no es un endpoint
@@ -67,42 +73,56 @@ previa. **El token se rota en las tres puertas de la sesión: `registro`, `login
 las tres pasan por la misma estrategia de autenticación—, así que después de cualquiera de ellas
 hay que releer la cookie: la anterior ya no sirve. Sin el header, la respuesta es `403`.
 
-### Errores: qué se puede prometer y qué no
+### Errores: una sola forma (D87)
 
-⚠️ **No hay manejo global de errores.** No existe ningún `@ControllerAdvice` en el proyecto:
-cada controller declara sus propios `@ExceptionHandler`. Eso parte las respuestas de error en
-tres familias, y el frontend tiene que tolerar las tres:
-
-| Familia | Quiénes | Forma |
-|---|---|---|
-| **`ProblemDetail` con `detail`** | los errores que cada controller declara: 404, 409, 403 de dueño, 400 de dominio | `application/problem+json` con `detail` legible |
-| **`ProblemDetail` + `errores` por campo** | **solo** los cuatro controladores que declaran el handler de validación: identidad (**alta de cuenta y login**, que comparten controlador), registro de diario, reporte y sugerencia | igual, más el mapa `errores` |
-| **Lo que arme el framework** | todo lo demás: los `401` y `403` de Spring Security, el `403` de CSRF, y **la validación de todos los formularios del admin** | **sin garantía de `detail` ni de `errores`** |
+✅ **Todo error de esta API es un `ProblemDetail` con `detail` en castellano.** Las tres familias
+que este documento describía —y que el frontend tenía que tolerar— se unificaron en el paso 3 de
+la Fase 4: entró un `@ControllerAdvice` global y los dos manejadores de la cadena de filtros.
 
 ```jsonc
-// familia 1
+// la forma, siempre
 { "type": "about:blank", "title": "Not Found", "status": 404,
   "detail": "No existe una producción con id 7" }
 
-// familia 2 — es lo que permite pintar el error al lado de cada input
-{ "status": 400, "detail": "Revisá los datos ingresados",
+// y cuando el problema es de campos, el mapa además — es lo que permite pintar el error al lado
+// de cada input, y ahora lo devuelven TODOS los formularios, el panel admin incluido
+{ "type": "about:blank", "title": "Bad Request", "status": 400,
+  "detail": "Revisá los datos ingresados",
   "errores": { "username": "Entre 3 y 20 caracteres: letras, números o guión bajo" } }
 ```
 
-**Consecuencias para el frontend, que no son negociables hasta que esto se normalice:**
-- El cliente HTTP tiene que **degradar con gracia**: si no hay `detail`, un mensaje propio por
-  código de estado. Nunca mostrar `undefined` ni asumir que el cuerpo tiene forma.
-- **Los formularios del admin (salas, personas, producciones, aprobar, rechazar, fusionar) no
-  devuelven `errores` por campo.** Un `400` ahí es "revisá el formulario" a secas. La validación
-  fina se hace en el cliente y el `400` es la red de contención, no la fuente del mensaje.
-- **`errores` puede faltar incluso en un endpoint que normalmente lo manda.** El caso concreto
-  es el `409` del alta de cuenta: ver abajo.
-- Un `401` puede venir con cuerpo vacío. No es un error a mostrar: es "no hay sesión" — y qué
-  hacer con él depende de para qué se llamó, no del código (`FRONTEND_ARCHITECTURE.md`).
+Lo que garantiza:
 
-Normalizar esto —un `@ControllerAdvice` que unifique las tres familias— es trabajo de backend y
-está anotado como hueco al final. **Mientras no exista, este documento no promete más de lo que
-el código hace.**
+| Antes | Ahora |
+|---|---|
+| Los formularios del admin devolvían `400` sin decir qué campo | **`errores` por campo en todos**: salas, personas, producciones, sugerencias, reportes, registros y alta de cuenta |
+| El `401`/`403` de Spring Security y el `403` de CSRF salían con lo que armara el framework, o con el cuerpo vacío | `ProblemDetail` con `detail`, igual que el resto |
+| Un `404` de ruta inexistente, un JSON roto o un `405` salían con el cuerpo genérico de Boot, en inglés cuando traían mensaje | `ProblemDetail` con `detail` **en castellano** |
+| Un fallo inesperado escapaba sin forma | `500` con `detail` genérico —"Algo falló de nuestro lado…"— y el error completo en el log del servidor, nunca en la respuesta |
+
+Los mensajes por estado, cuando el error lo detectó el framework y no el dominio: `400` "Revisá
+los datos ingresados" · `401` "No hay una sesión iniciada" · `403` "No tenés permiso para hacer
+eso" (o "El token de seguridad venció. Probá de nuevo" si es de CSRF, que son dos cosas
+distintas: una no se arregla reintentando y la otra sí) · `404` "Eso no existe o ya no está" ·
+`405` "Esa acción no se puede hacer así" · `415` "Ese tipo de contenido no se acepta" · `5xx`
+"Algo falló de nuestro lado. Probá de nuevo en un rato".
+
+**Lo que NO cambió, y es a propósito:** los errores de dominio siguen declarados en su
+controlador. La forma es la misma para todos, pero *qué significa* cada uno lo decide el
+endpoint, no el tipo — `DataIntegrityViolationException` es un `409` al borrar una sala y un
+`204` al dar dos veces el mismo like—, y la mitad de esas excepciones son internas de su módulo,
+que la capa de aplicación no puede ni nombrar (ADR-001). Un `@ExceptionHandler` de un controlador
+le gana al global, que es lo que mantiene en pie los mensajes que son una decisión: el `401` del
+login sigue diciendo "Email/usuario o contraseña incorrectos" sin revelar cuál de los dos falló
+(HU-02).
+
+**Lo que el frontend sigue teniendo que hacer**, y no es deuda sino buen cliente HTTP:
+- **Degradar con gracia igual**: si un día falta `detail`, un mensaje propio por código de
+  estado. Nunca mostrar `undefined`. Hay respuestas sin cuerpo por diseño (todos los `204`).
+- **`errores` está solo cuando el problema es de campos.** Un `409` de alta de cuenta puede venir
+  con el mapa o sin él, según sea el chequeo o la carrera del índice único: ver abajo.
+- Un `401` **no es un error a mostrar**: es "no hay sesión", y qué hacer con él depende de para
+  qué se llamó, no del código (`FRONTEND_ARCHITECTURE.md`).
 
 ### Fechas
 
@@ -259,7 +279,7 @@ Una persona puede aparecer en varias participaciones de la misma ficha, una por 
 {
   "promedio": 8.4,          // ⚠️ último rating de cada usuario (D20), NO un AVG. null si nadie puntuó
   "cantidadRatings": 17,    // personas, no registros
-  "vecesQueLaVi": 2,        // ⏳ D76 — null sin sesión; 0..N con sesión
+  "vecesQueLaVi": 2,        // D76 — null sin sesión; 0..N con sesión
   "resenias": [
     { "registroId": 91, "autor": "ramiro", "texto": "...", "rating": 9,
       "fecha": "2026-03-01", "granularidad": "MES",
@@ -445,8 +465,8 @@ acá **sin perder lo que ya se había tipeado** en el buscador del gesto.
 
 ## Panel de admin
 
-Todo pide rol `ADMIN`; sin él, **`403`**. Sin sesión, **`401`**. Ninguno de estos endpoints
-devuelve `errores` por campo: ver la sección de errores.
+Todo pide rol `ADMIN`; sin él, **`403`**. Sin sesión, **`401`**. Desde D87 estos endpoints
+**sí devuelven `errores` por campo** como el resto: ver la sección de errores.
 
 ### Salas (HU-19) y Personas (HU-20)
 
@@ -717,17 +737,18 @@ reseña, no solo al que se tocó (D70):
 
 ## Huecos conocidos
 
-Lo que falta o no cierra, para que no se descubra a mitad de una pantalla. Los **dos** primeros
-son **trabajo de backend de esta misma fase** (y están en el ROADMAP como tales); del 3 en
-adelante son límites aceptados, no deuda.
+Lo que falta o no cierra, para que no se descubra a mitad de una pantalla. El **primero** es
+**trabajo de backend de esta misma fase** (y está en el ROADMAP como tal); del 3 en adelante son
+límites aceptados, no deuda.
 
-1. **Los dos ⏳.** Los afiches (D72/D77) y `vecesQueLaVi` (D76) no existen todavía. Las pantallas
-   que dependen de ellos no cierran hasta que el backend los tenga. Y a los afiches les falta
-   además una decisión, no solo código: **P16**, cómo se procesa la imagen al subirla — va después
-   de `DESIGN_SYSTEM.md` y bloquea el endpoint, no las pantallas.
-2. **No hay manejo global de errores.** Sin `@ControllerAdvice`, los formularios del admin y todo
-   lo que resuelve Spring Security responden con la forma que arme el framework. Normalizarlo es
-   backend; mientras tanto el cliente HTTP degrada con gracia (ver la sección de errores).
+1. **El ⏳ que queda: los afiches** (D72/D77). Las pantallas que dependen de ellos no cierran
+   hasta que el backend los tenga. De P16 —cómo se procesa la imagen al subirla— **ya está
+   decidido lo que bloqueaba**: herramienta y formato (TwelveMonkeys para decodificar, salida
+   JPEG). Lo que queda de P16 —calidad, EXIF, tope de píxeles decodificados— se cierra junto con
+   el endpoint, que es el paso que sigue.
+2. ~~**No hay manejo global de errores.**~~ **Cerrado en D87**: hay `@ControllerAdvice` y los dos
+   manejadores de la cadena de filtros, así que las tres familias son una sola y los formularios
+   del admin devuelven `errores` por campo. Ver la sección de errores.
 3. **No hay listado público del catálogo entero**: se llega por en-cartel, por búsqueda o por
    link. Es coherente con USER_FLOWS —no existe una pantalla "todas las obras"— pero conviene
    saberlo antes de buscar el endpoint. El listado completo existe pero es del admin.

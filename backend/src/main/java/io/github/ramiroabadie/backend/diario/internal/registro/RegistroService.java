@@ -170,6 +170,16 @@ class RegistroService implements Diario {
 		return new OpinionesDeProduccion(conUnDecimal(valoracion.getPromedio()), valoracion.getCantidad(), resenias);
 	}
 
+	/**
+	 * El re-visto que la ficha muestra (HU-10, D76). Es un {@code count} y no la lista: lo único
+	 * que la pantalla dibuja es el número, y el diario completo ya se sirve en el perfil.
+	 */
+	@Override
+	@Transactional(readOnly = true)
+	public long vecesRegistrada(Long usuarioId, Long produccionId) {
+		return repositorio.countByUsuarioIdAndProduccionId(usuarioId, produccionId);
+	}
+
 	@Override
 	@Transactional(readOnly = true)
 	public Optional<Long> autorDeResenia(Long registroId) {

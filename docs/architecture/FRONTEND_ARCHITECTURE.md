@@ -1,6 +1,12 @@
 # Frontend Architecture
 
-> Estado: v1.4 — el paso 2 de la Fase 4 (las pantallas públicas) agrega **tres piezas que la
+> Estado: v1.5 — el paso 3 de la Fase 4 (lo que le quedaba al backend) toca **una sola sección**:
+> los errores. El backend unificó las tres familias en una (D87), así que la sección lo dice y la
+> fila del `400` sin `errores` deja de ser el caso normal del panel admin. **Ninguna regla del
+> frontend cambia**: `client.ts` aplana igual y el contexto sigue siendo lo que decide qué hacer
+> con cada código.
+>
+> La v1.4 — el paso 2 de la Fase 4 (las pantallas públicas) agrega **tres piezas que la
 > estructura no nombraba** y una regla de metadatos: `lib/formato.ts` ya estaba anotado y ahora
 > existe, entran **`lib/metadatos.ts`** (los seis campos de Open Graph, una sola vez),
 > **`lib/og.ts` + `app/og/{tipo}/{id}`** (la placa, D85) y **`frontend/assets/`**, que es la
@@ -79,7 +85,7 @@ frontend/
     api/                        ← el ÚNICO lugar con fetch
       client.ts                 navegador: CSRF, errores, mismo origen
       server.ts                 server components: URL interna, cookies, caché
-      errores.ts                las tres familias de API.md aplanadas, para los dos
+      errores.ts                el error de API.md aplanado + la tabla por código, para los dos
       <modulo>.servidor.ts      lecturas del SSR       ┐ catalogo · diario · social
       <modulo>.cliente.ts       lo que pide el navegador ┘ identidad · admin (D82)
       tipos.ts                  los tipos de API.md, a mano
@@ -471,8 +477,18 @@ casi siempre es un caso de uso que le falta al backend.
 
 ## Errores
 
-`API.md` describe tres familias de respuesta de error, porque el backend no tiene manejo global
-todavía. **`client.ts` las aplana en un solo tipo** y ninguna pantalla ve la diferencia:
+⚠️ **Actualizado por D87: el backend ya tiene manejo global, así que las tres familias que
+`API.md` describía son una sola** — `ProblemDetail` con `detail` en castellano siempre, y el mapa
+`errores` cuando el problema es de campos, **en todos los formularios y no en cuatro**. Para el
+frontend eso **no cambia ninguna regla de esta sección**, y conviene decir por qué: `client.ts`
+aplana igual, la tabla de mensajes propios por código sigue siendo la red de contención —hay
+respuestas sin cuerpo por diseño, todos los `204`—, y la tabla de más abajo nunca dependió de la
+familia sino del **contexto**, que es lo único que decide qué hacer con un código. Lo que sí
+cambia es lo que se puede dar por seguro: **los formularios del panel admin ahora pintan el error
+al lado de cada input**, así que la fila del `400` sin `errores` deja de ser el caso normal ahí y
+pasa a ser el respaldo.
+
+**`client.ts` aplana la respuesta en un solo tipo** y ninguna pantalla ve la diferencia:
 
 ```ts
 type ErrorDeApi = { status: number; mensaje: string; errores?: Record<string, string> };
@@ -489,7 +505,7 @@ columnas:
 | Código | Contexto | Qué hace la pantalla |
 |---|---|---|
 | `400` con `errores` | cualquiera | error al lado de cada input |
-| `400` sin `errores` | **todo el panel admin** | mensaje general del formulario |
+| `400` sin `errores` | el respaldo, en cualquier formulario — **ya no es el caso normal del panel admin** (D87) | mensaje general del formulario |
 | `401` | **`GET /api/auth/yo` usado para saber si hay sesión, o como semilla del token CSRF** | **no se muestra y no navega a ningún lado**: `401` acá significa "anónimo", que es el estado normal de la mayoría de las visitas. Se dibuja la versión sin sesión de la pantalla |
 | `401` | **acción o pantalla protegida** (mutación, panel admin, feed, cualquier cosa que necesite un yo) | redirige a login y **vuelve a donde estaba, con lo tipeado** (USER_FLOWS). Tampoco es "un error del servidor": es sesión ausente o vencida |
 | `403` | de CSRF | releer el token y **reintentar una vez**, en silencio |

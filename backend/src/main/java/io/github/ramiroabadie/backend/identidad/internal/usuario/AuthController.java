@@ -1,7 +1,6 @@
 package io.github.ramiroabadie.backend.identidad.internal.usuario;
 
 import java.net.URI;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,8 +19,6 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 import org.springframework.security.web.context.SecurityContextRepository;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -90,20 +87,6 @@ class AuthController {
 		SecurityContextHolder.setContext(contexto);
 		contextos.saveContext(contexto, request, response);
 		return autenticado;
-	}
-
-	/** El alta informa qué campo falló (HU-01). */
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ProblemDetail datosInvalidos(MethodArgumentNotValidException ex) {
-		Map<String, String> porCampo = new LinkedHashMap<>();
-		for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-			porCampo.putIfAbsent(error.getField(), error.getDefaultMessage());
-		}
-		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-				"Revisá los datos ingresados");
-		problema.setProperty("errores", porCampo);
-		return problema;
 	}
 
 	@ExceptionHandler(CampoEnUsoException.class)

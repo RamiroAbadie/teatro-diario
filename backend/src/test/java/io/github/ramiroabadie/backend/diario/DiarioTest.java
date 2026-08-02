@@ -302,6 +302,35 @@ class DiarioTest {
 				.andExpect(status().isNotFound());
 	}
 
+	/**
+	 * HU-10 y D76: la ficha evidencia cuántas veces la vio quien la está mirando. Los tres
+	 * estados de la convención de D67/D68, que dibujan tres cosas distintas: nulo es "no hay
+	 * nadie a quien decírselo", cero es "todavía no la viste" —y habilita el CTA de registrar— y
+	 * el número es el re-visto de D19. Cuenta registros propios: lo que registró otra persona en
+	 * la misma obra no suma.
+	 */
+	@Test
+	void laFichaDiceCuantasVecesLaVioQuienLaMira() throws Exception {
+		Long produccion = crearProduccion("Una obra muy vista");
+		MockHttpSession repetidora = cuenta("roberta");
+		MockHttpSession primeriza = cuenta("gaspar");
+		registrar(repetidora, produccion, "2024-04-04", "DIA", 8, null);
+		registrar(repetidora, produccion, "2025-04-04", "DIA", 9, null);
+		registrar(primeriza, produccion, "2025-05-05", "DIA", 7, null);
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones"))
+				.andExpect(jsonPath("$.vecesQueLaVi").isEmpty());
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(repetidora))
+				.andExpect(jsonPath("$.vecesQueLaVi").value(2));
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(primeriza))
+				.andExpect(jsonPath("$.vecesQueLaVi").value(1));
+
+		mockMvc.perform(get("/api/producciones/" + produccion + "/opiniones").session(cuenta("milena")))
+				.andExpect(jsonPath("$.vecesQueLaVi").value(0));
+	}
+
 	/** El catálogo es cerrado (D7): no se puede registrar algo que no está. Y registrar pide cuenta. */
 	@Test
 	void elRegistroPideSesionYUnaProduccionDelCatalogo() throws Exception {

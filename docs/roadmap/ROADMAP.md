@@ -147,17 +147,29 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    ficha con el afiche a 60 vh contra el cromo del armazón — no se puede medir hasta que haya
    un afiche (P16), y hoy la ficha sin afiche cambia de forma y entra sobrada.
 3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas
-   que no cierran: la subida de afiches con redimensionado y versionado (HU-20, D72/D77,
-   adelantada desde la Fase 5), el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice`
-   que unifique las respuestas de error — hoy no hay ninguno y los formularios del admin no
-   devuelven errores por campo.
-   ⚠️ **La subida de afiches todavía no se puede empezar**: le falta una decisión, no código.
-   Con qué se decodifica, redimensiona y codifica la imagen es **P16**, y es una dependencia
-   nueva que D51 exige decidir y no adoptar — el JDK no escribe WebP y el `pom.xml` no tiene
-   ninguna librería de imágenes. **La mitad que dependía del diseño ya está**: D79 fijó las
-   dimensiones (caja de origen 1200×1600 **sin recortar**, un solo archivo, el recorte de la
-   grilla lo hace CSS), así que lo que queda de P16 es herramienta, formato, calidad, EXIF y
-   tope de píxeles decodificados.
+   que no cierran. Va en dos entregas y la primera está hecha:
+   ~~el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice` que unifique las
+   respuestas de error~~ **HECHO.** `vecesQueLaVi` sale de `opinionesDe` como pregunta aparte
+   —una consulta que solo se paga con sesión— con los tres estados de la convención de D67/D68:
+   nulo sin sesión, `0` con sesión y sin registros —que es lo que habilita el CTA— y el
+   re-visto de D19 cuando la vio varias veces. Y **las tres familias de error de `API.md` pasan a
+   ser una sola** (D87): `ProblemDetail` con `detail` en castellano siempre, `errores` por campo
+   en **todos** los formularios y no en cuatro —que es lo que al panel admin le faltaba—, el
+   `401`/`403` de la cadena de filtros con la misma forma, y el fallo inesperado como un `500`
+   con forma y sin tripas. Los errores de dominio no se movieron: la forma se unifica, el
+   significado lo sigue decidiendo el endpoint. **79 tests en verde**, `ModulithArchitectureTest`
+   incluido: el advice no nombra una sola clase interna de un módulo.
+   **Falta la segunda entrega: la subida de afiches** con redimensionado y versionado (HU-20,
+   D72/D77, adelantada desde la Fase 5).
+   ✅ **Ya se puede empezar**: lo que la bloqueaba era **P16**, y el fundador cerró lo que
+   bloqueaba —**TwelveMonkeys** para decodificar (Java puro, sin binarios nativos, y acepta los
+   tres formatos de entrada que promete `API.md`) y **salida JPEG**, porque no existe un escritor
+   de WebP en Java puro—. Eso **cambia la URL pública de `.webp` a `.jpg` y enmienda D77**. Lo que
+   queda de P16 se cierra con el código: calidad, orientación EXIF y tope de píxeles
+   decodificados, que es el único de los tres que es de seguridad y no de calidad —los 5 MB son
+   del archivo comprimido y no acotan la memoria—. La parte que dependía del diseño ya estaba:
+   D79 fijó las dimensiones (caja de origen 1200×1600 **sin recortar**, un solo archivo, el
+   recorte de la grilla lo hace CSS).
 4. Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
    gesto de registro con autocompletado y el desvío a sugerir sin perder lo tipeado
    (HU-08/09/10), editar y borrar con confirmación (HU-11).
