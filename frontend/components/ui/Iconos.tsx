@@ -67,6 +67,18 @@ export function IconoCartel({ className = "size-5" }: Props) {
   );
 }
 
+/**
+ * El corazón. Hoy sólo dibuja el **contador** de likes de una reseña, que se lee sin sesión
+ * (D21): el botón que alterna es la isla de HU-17 y entra en el paso 5.
+ */
+export function IconoCorazon({ className = "size-4" }: Props) {
+  return (
+    <svg {...comunes} className={className}>
+      <path d="M12 19.5C7 16 3.5 13.2 3.5 9.6A3.9 3.9 0 0 1 12 7.2a3.9 3.9 0 0 1 8.5 2.4c0 3.6-3.5 6.4-8.5 9.9Z" />
+    </svg>
+  );
+}
+
 export function IconoCheuron({ className = "size-4" }: Props) {
   return (
     <svg {...comunes} className={className}>

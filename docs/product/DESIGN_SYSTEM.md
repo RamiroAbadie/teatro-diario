@@ -1,6 +1,14 @@
 # Design System
 
-> Estado: v1.2 — tercero de los cuatro documentos del paso 0 de la Fase 4, después de
+> Estado: v1.3 — el paso 2 de la Fase 4 cierra la pregunta que este documento dejó anotada
+> —**con qué se genera la placa de `og:image`**: `next/og` con una Noto Serif subseteada de
+> 30 KB embebida en `frontend/assets/`, que **no es una webfont** porque el navegador no la
+> descarga nunca (**D85**)— y corrige **la celda de la grilla** contra lo que se vio al
+> dibujarla: **el título va una sola vez por celda** y la placa **estira** para que la celda
+> más corta no deje un rectángulo vacío (**D86**). Los tokens, la paleta, la escala y los diez
+> componentes **no cambian**.
+>
+> La v1.2 fue el tercero de los cuatro documentos del paso 0 de la Fase 4, después de
 > `architecture/API.md` (v1.2) y `architecture/FRONTEND_ARCHITECTURE.md` (v1.3). El que sigue
 > es `product/SCREEN_SPECS.md` (v1.2), que cierra el paso.
 > Lo respalda **D79**; la v1.1 **D81** (el armazón de cuatro piezas trae los valores de la barra
@@ -540,11 +548,17 @@ WhatsApp y Twitter recortan distinto. Abajo a la izquierda queda **un espacio re
 para el logotipo del día que P2 cierre**: hoy no se dibuja nada ahí y la placa se sostiene igual,
 que es exactamente lo que pide la regla 3.
 
-⚠️ **Anotado y no cerrado acá:** *con qué* se genera esa imagen. `next/og` viene con Next (no es
-dependencia nueva) pero **necesita un archivo de fuente embebido**, y este documento acaba de
-decidir que no hay webfont. Se resuelve al construir la ficha (paso 2 de la Fase 4) y no bloquea
-nada de acá: puede ser un único `.woff` serif embebido sólo para la generación de imágenes, sin
-que la web cargue una fuente. **No lo decide este documento y no es P16**, que es otra cosa.
+✅ **Cerrado en D85** (paso 2 de la Fase 4), y salió como esta sección lo anticipaba. `next/og`
+viene con Next —no es dependencia nueva— pero **necesita un archivo de fuente embebido**: satori,
+su motor, **no lee fuentes del sistema** y por defecto trae una sans. Entra entonces un **Noto
+Serif (OFL 1.1) subseteado a latín, 30 KB**, en `frontend/assets/`, con su licencia y el comando
+que lo generó al lado. **No contradice "cero webfonts"**: el navegador no lo descarga nunca —se
+usa sólo en el servidor, para generar esta imagen— y las dos familias del sitio siguen siendo las
+del sistema. La placa vive en `app/og/{tipo}/{id}` y no en el `opengraph-image.tsx` convencional,
+porque ese archivo ganaría sobre `generateMetadata` y **haría imposible escribir la regla de acá
+arriba**: cuando haya afiche, el `og:image` es el afiche tal cual. El costo asumido del
+subconjunto: cubre latín, Latin-1 y Latin Extended-A —castellano y los nombres europeos de un
+catálogo de CABA—, y un glifo fuera de ese rango saldría como un cuadrito.
 
 ### 2 · El camino del catálogo cerrado
 
@@ -590,6 +604,12 @@ esta semana y no sabe qué ver.**
 - **Grilla de `Tarjeta` variante `grilla`**: 2 columnas en el celular, 3 en `sm`, 4 en `lg`. Cada
   celda es afiche o placa + título + sala/complejo. Nada más, porque nada más viene en el resumen
   de producción.
+  ⚠️ **Con una precisión que sólo se vio al dibujarla** (D86): **el título va una sola vez por
+  celda**. Con afiche va debajo de la imagen; **sin afiche ya está adentro de la placa**, grande
+  y en la serif, y abajo queda sólo la sala. Escrito como estaba —"placa + título"— el título
+  aparecía dos veces en 164 px y **se leía como un bug**, que es justo lo que el criterio de
+  aceptación de esta grilla no perdona. Y **la caja de la imagen crece** para que la celda con
+  menos texto no rellene con un rectángulo vacío la altura que le impone la fila.
 - **Sin filtros, sin calendario, sin barrio, sin horarios.** No hay agenda de funciones (X4, P6) y
   el estado de la producción es el máximo nivel de vigencia que el producto mantiene. Un filtro
   por sala sería la primera pieza de una agenda.

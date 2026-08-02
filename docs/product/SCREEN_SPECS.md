@@ -1,6 +1,12 @@
 # Screen Specs
 
-> Estado: v1.2 — la v1.0 cerró el paso 0 de la Fase 4; es el cuarto y último de los documentos
+> Estado: v1.3 — el paso 2 de la Fase 4 escribió **las pantallas 1, 3, 4, 5, 6 y 13** y este
+> documento se corrige en dos puntos contra lo que se vio al dibujarlas: **la celda de la grilla
+> no repite el título** (D86, ver la pantalla 6) y **la placa de `og:image` ya tiene con qué
+> generarse** (D85, punto 2 de "lo que este documento deja anotado", ahora cerrado). Ninguna
+> pantalla cambia de contenido ni de datos.
+>
+> La v1.0 cerró el paso 0 de la Fase 4; es el cuarto y último de los documentos
 > que van antes de la primera pantalla, después de `architecture/API.md` (v1.2),
 > `architecture/FRONTEND_ARCHITECTURE.md` (v1.3) y `product/DESIGN_SYSTEM.md` (v1.2).
 > Lo respalda **D80**; la v1.1 **D81** (el armazón pasa de tres piezas a cuatro: menú principal
@@ -211,8 +217,9 @@ degradado y no roto.
 visible de `DESIGN_SYSTEM.md`, que no se quita nunca · los estados que llegan por color llevan
 además texto (el chip dice "EN CARTEL", no es sólo ámbar) · `aria-live="polite"` en los resultados
 del autocompletado y en los contadores que cambian solos · toda imagen con `alt` (el del afiche es
-`Afiche de {título}`; la placa es decorativa y va con `alt=""`, porque el título ya está al lado
-como texto).
+`Afiche de {título}`; **la placa es decorativa sólo donde el título está al lado como texto —la
+miniatura de una fila—, y NO en la celda de la grilla**, donde con D86 el título vive adentro de
+la placa y ocultarla deja el link de la celda sin nombre accesible).
 
 ---
 
@@ -403,7 +410,8 @@ contrato no los trae y pedirlos sería una agenda (X4, P6).
 | OG | sí |
 
 **Composición**: `h1` "En cartel" · grilla de `Tarjeta` variante `grilla` (**2 columnas / 3 en
-`sm` / 4 en `lg`**), cada celda con afiche o placa ⏳, título y sala · después, encabezado
+`sm` / 4 en `lg`**), cada celda con afiche o placa ⏳, título y sala — **el título una sola vez:
+con afiche debajo de la imagen, sin afiche adentro de la placa y nada más** (D86) · después, encabezado
 `text-xl` **"Próximamente"** y la misma grilla, con su chip. **Sin filtros, sin calendario, sin
 barrio, sin orden configurable** (D79): el orden lo da la API y el primer filtro es la primera
 pieza de una agenda.
@@ -707,7 +715,13 @@ refrescar y seguir.
 | `app/error.tsx` | cualquier excepción no atrapada | `EstadoVacio` variante `error` + "Reintentar" (`reset()`). **Sin stack trace, sin código interno** |
 
 Las dos llevan el armazón completo: cabecera, botón persistente y pie. Una 404 sin salidas es una
-pantalla muerta al final del Flujo 1.
+pantalla muerta al final del Flujo 1. **Y las dos llevan su título en `<h1>`**: son la pantalla, no un
+bloque adentro de una, y la regla de accesibilidad pide uno por pantalla.
+
+⚠️ **Limitación medida y anotada como P18**: el `notFound()` de una ficha, un artista o una sala
+—y el `error.tsx`— **sólo se pintan con JavaScript**. El estado HTTP es correcto y con JS se ve la
+pantalla entera; lo que se pierde es la 404 sin JavaScript. El 404 global (`/cualquier-cosa`) **sí
+llega en el HTML**.
 
 ---
 
@@ -748,9 +762,10 @@ bloquea el cierre de una historia es backend, no diseño: `vecesQueLaVi` (D76) y
    que el backend las tenga.** Las zonas afectadas están marcadas y ninguna deja un hueco visual
    mientras tanto: sin `aficheUrl` la ficha ya se ve terminada (D79), y sin `vecesQueLaVi` el CTA
    simplemente no se dibuja.
-2. **Con qué se genera la placa de `og:image`.** Anotado en D79: `next/og` viene con Next pero
-   pide un archivo de fuente embebido, y el sistema decidió no cargar webfonts. Se resuelve al
-   escribir la ficha (paso 2 de la Fase 4). **No bloquea nada de acá y no es P16.**
+2. ~~**Con qué se genera la placa de `og:image`.**~~ ✅ **Cerrado en D85**, al escribir la ficha:
+   `next/og` con un Noto Serif subseteado de 30 KB embebido en `frontend/assets/` —satori no lee
+   fuentes del sistema— y una ruta propia, `app/og/{tipo}/{id}`, para que la regla "si hay afiche,
+   el `og:image` es el afiche" se pueda escribir. **No era P16 y no lo tocó.**
 3. **P16** sigue abierto: herramienta, formato, calidad, EXIF y tope de píxeles decodificados. Los
    tamaños ya los fijó D79.
 4. **El `@ControllerAdvice` que falta** (hueco 2 de `API.md`): mientras no exista, la validación
