@@ -1,11 +1,14 @@
 # Design System
 
-> Estado: v1.1 — tercero de los cuatro documentos del paso 0 de la Fase 4, después de
-> `architecture/API.md` (v1.2) y `architecture/FRONTEND_ARCHITECTURE.md` (v1.1). El que sigue
-> es `product/SCREEN_SPECS.md` (v1.1, D80/D81), que cierra el paso.
-> Lo respalda **D79**, y la v1.1 **D81**: el armazón de cuatro piezas trae los valores de la
-> barra de destinos y **sube la lista de íconos de seis a diez**. Los tokens, la paleta, la escala
-> y los diez componentes de `ui/` **no cambian**.
+> Estado: v1.2 — tercero de los cuatro documentos del paso 0 de la Fase 4, después de
+> `architecture/API.md` (v1.2) y `architecture/FRONTEND_ARCHITECTURE.md` (v1.3). El que sigue
+> es `product/SCREEN_SPECS.md` (v1.2), que cierra el paso.
+> Lo respalda **D79**; la v1.1 **D81** (el armazón de cuatro piezas trae los valores de la barra
+> de destinos y **sube la lista de íconos de seis a diez**) y la v1.2 dos correcciones del paso 1:
+> **D84 da vuelta la regla de voz —los botones van en infinitivo, sin la excepción del panel—**,
+> que cierra P17, y **D83 corrige el cuerpo de `Usuario` variante `cabecera`**, que decía
+> `text-lg` y va en `text-3xl`/`sm:text-4xl`. Los tokens, la paleta, la escala y los diez
+> componentes de `ui/` **no cambian**.
 >
 > **Qué decide:** los tokens (color, tipografía, espacio, radios, sombras, breakpoints), los
 > componentes de `components/ui/`, cómo se dibujan los casos degradados que la API sí devuelve,
@@ -411,7 +414,11 @@ no navega.
 gente.
 
 - **V:** `linea` (avatar 24 px + username `text-sm`) · `cabecera` (avatar 56 px + username
-  `text-lg` + meta).
+  **`text-3xl` → `sm:text-4xl`** + meta).
+  ⚠️ Acá decía `text-lg`, y era un error: `cabecera` la usa **una sola pantalla, el perfil**
+  (`SCREEN_SPECS.md` 8), donde el username **es el título de la pantalla** — y la tabla de la
+  escala de este mismo documento asigna ese escalón a "título de ficha y de perfil, y nada
+  más". Corregido al escribir el componente (paso 1 de la Fase 4).
 - **E:** ***autor `null`*** → avatar neutro **sin letra**, texto "cuenta eliminada" en
   `tinta-tenue` y en cursiva, **sin link**. Es el caso de `API.md` para reseñas, ítems del feed y
   las dos colas del admin. *Cargando* → círculo y barra de esqueleto. *Error* y *deshabilitado*
@@ -452,7 +459,8 @@ gente.
 **Qué resuelve:** los huecos que USER_FLOWS marcó como el lugar donde los MVPs de una persona
 siempre quedan flojos. Título corto en serif, una línea de explicación, **como máximo un botón**.
 
-- **V:** `invitacion` (diario vacío → "Registrá lo último que viste", HU-12/Flujo 2) ·
+- **V:** `invitacion` (diario vacío → **el texto** dice "Registrá lo último que viste" y **el
+  botón** dice "Registrar", HU-12/Flujo 2 — el voseo vive en la frase, no en la etiqueta, D84) ·
   `sin-resultados` (búsqueda vacía → deriva a sugerir, con lo tipeado; ver el camino del catálogo
   cerrado) · `informativo` (nada que hacer todavía: "Nadie escribió una reseña todavía", sin
   botón) · `error` (5xx: "No pudimos cargar esto" + "Reintentar", **sin perder lo tipeado**) ·
@@ -674,9 +682,15 @@ link en WhatsApp) y si la miniatura resulta pobre, se revisa entonces. Sin afich
 
 Sin i18n: **castellano rioplatense, voseo, una sola persona escribiendo** (`FRONTEND_ARCHITECTURE.md`).
 
-- **Los botones son verbos en imperativo voseante**: "Registrá", "Sugerí", "Publicá", "Seguí",
-  "Borrá". Excepción: los del panel admin son infinitivos secos ("Aprobar", "Rechazar",
-  "Fusionar") — es una herramienta, no un producto (Flujo 4).
+- **Los botones son verbos en infinitivo**: "Registrar", "Sugerir", "Publicar", "Seguir",
+  "Borrar", "Crear tu diario", "Enviar", "Guardar". **Sin excepciones y sin voseo**: el panel
+  admin ya no es un caso aparte, porque ahora habla igual que el resto.
+  ⚠️ **Acá decía lo contrario** —imperativo voseante, con el panel como excepción—, y eso era
+  **P17/MD-6**, que estaba abierto: `SCREEN_SPECS.md` venía nombrando las etiquetas en
+  infinitivo y este documento fijaba la regla al revés. **Cerrado en D84 a favor del
+  infinitivo.** El voseo **no se va del producto**: sigue en todo lo demás —títulos, estados
+  vacíos, avisos, errores—, que es donde la voz se escucha. Un botón es una etiqueta, no una
+  frase.
 - **Los estados vacíos hablan del usuario, no del sistema.** "Todavía no registraste nada", no
   "No hay datos".
 - **Los errores dicen qué hacer.** "Revisá el email" antes que "Error de validación". Cuando no se
@@ -690,8 +704,8 @@ Sin i18n: **castellano rioplatense, voseo, una sola persona escribiendo** (`FRON
 
 ## Lo que este documento NO trae, y dónde está
 
-- **Las pantallas una por una**, con su composición y sus llamadas: `SCREEN_SPECS.md` (v1.1,
-  D80/D81), que es el que cierra el paso 0 de la Fase 4 — y donde vive el armazón completo: el
+- **Las pantallas una por una**, con su composición y sus llamadas: `SCREEN_SPECS.md` (v1.2,
+  D80/D81/D83), que es el que cierra el paso 0 de la Fase 4 — y donde vive el armazón completo: el
   contenido del menú principal por sesión y por rol, y las celdas de la barra de destinos.
 - **El código de los componentes**: se escribe con el esqueleto de `/frontend` (paso 1).
 - **Cualquier herramienta nueva**: no hay ninguna. Ni librería de UI (D73), ni de íconos, ni de

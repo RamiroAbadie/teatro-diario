@@ -228,7 +228,8 @@ respuesta esperada del visitante anónimo, que además es la mayoría. **Ese `40
 ningún lado** — el que redirige es el `401` de una acción protegida, que es otro contexto
 (`FRONTEND_ARCHITECTURE.md`). Ese mismo `401` es el que el frontend usa como semilla del token
 CSRF: por cómo está armada la cadena de filtros trae `Set-Cookie: XSRF-TOKEN` igual que
-cualquier otra respuesta — con la comprobación por HTTP todavía pendiente, ver D78 y
+cualquier otra respuesta. ✅ **Comprobado** contra el backend corriendo (D82): el `401` de
+`/api/auth/yo` trae la cookie, directo y a través del rewrite de desarrollo. Detalle en
 `FRONTEND_ARCHITECTURE.md`.
 
 ---

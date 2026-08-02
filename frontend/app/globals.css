@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Tokens — product/DESIGN_SYSTEM.md (D79)
+   ESTE ES EL ÚNICO ARCHIVO DEL FRONTEND DONDE SE ESCRIBE UN HEX.
+   Ningún componente nombra un color: todos usan la clase de
+   Tailwind que sale del token, y el nombre del token dice el ROL.
+   ============================================================ */
+
+:root {
+  --papel:            #FAF8F4;   --superficie:      #FFFFFF;
+  --borde:            #E5E0D6;   --borde-control:   #8F887E;
+  --tinta:            #191713;   --tinta-suave:     #57534E;   --tinta-tenue: #726D66;
+  --acento:           #E8A317;   --acento-tinta:    #8A5A0B;   --acento-suave: #FDF3DF;
+  --sobre-acento:     #121110;
+  --peligro:          #B42318;   --peligro-tinta:   #B42318;   --sobre-peligro: #FFFFFF;
+  --foco:             #8A5A0B;
+
+  /* Dos familias, las dos del sistema. Cero webfonts (D79). */
+  --fuente-titulo: ui-serif, Georgia, "Times New Roman", serif;
+  --fuente-texto:  ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+                   "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Tema oscuro: automático, lo elige el sistema operativo, y no hay interruptor
+   (D79). Es un bloque @media con quince valores; ningún componente escribe `dark:`. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papel:          #121110;   --superficie:      #1B1A18;
+    --borde:          #322F2B;   --borde-control:   #6B665E;
+    --tinta:          #F5F2EC;   --tinta-suave:     #C0BAB0;   --tinta-tenue: #938C81;
+    --acento:         #E8A317;   --acento-tinta:    #F0B429;   --acento-suave: #2A2011;
+    --sobre-acento:   #121110;
+    --peligro:        #B42318;   --peligro-tinta:   #FF8A7A;   --sobre-peligro: #FFFFFF;
+    --foco:           #E8A317;
+  }
+}
+
+@theme inline {
+  --color-papel: var(--papel);           --color-superficie: var(--superficie);
+  --color-borde: var(--borde);           --color-borde-control: var(--borde-control);
+  --color-tinta: var(--tinta);           --color-tinta-suave: var(--tinta-suave);
+  --color-tinta-tenue: var(--tinta-tenue);
+  --color-acento: var(--acento);         --color-acento-tinta: var(--acento-tinta);
+  --color-acento-suave: var(--acento-suave);
+  --color-sobre-acento: var(--sobre-acento);
+  --color-peligro: var(--peligro);       --color-peligro-tinta: var(--peligro-tinta);
+  --color-sobre-peligro: var(--sobre-peligro);
+
+  --font-titulo: var(--fuente-titulo);
+  --font-texto: var(--fuente-texto);
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--papel);
+    color: var(--tinta);
+    font-family: var(--fuente-texto);
+  }
+
+  /* Foco visible siempre. No se quita nunca; :focus-visible para que no
+     aparezca en clics con mouse (D79). */
+  :focus-visible {
+    outline: 2px solid var(--foco);
+    outline-offset: 2px;
+  }
+
+  /* El fondo inerte de todo lo que se superpone: hoja del gesto,
+     Confirmacion y el menú principal del armazón (D80/D81). */
+  dialog::backdrop {
+    background-color: color-mix(in srgb, var(--tinta) 50%, transparent);
+  }
+
+  dialog {
+    max-width: 100%;
+    max-height: 100%;
+  }
+}
+
+/* Transiciones: 150 ms y sólo de color, background-color, border-color y
+   opacity. Nada se mueve de lugar, nada escala (D79). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

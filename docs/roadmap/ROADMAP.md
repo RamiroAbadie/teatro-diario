@@ -95,8 +95,30 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    por pantalla con sus datos, su composición, sus islas cliente y **los cuatro estados
    obligatorios**; el gesto como hoja y no como ruta, y la matriz de cobertura de las 22 historias).
    ~~Referencia de interfaz~~: cerrada en D71. **Lo que sigue es el punto 1: código.**
-1. Esqueleto de `/frontend` + Tailwind (D73) + el layout con la navegación y el botón de
-   registrar siempre presente (D71).
+1. ~~Esqueleto de `/frontend` + Tailwind (D73) + el layout con la navegación y el botón de
+   registrar siempre presente (D71).~~ **HECHO.** Next 16 con App Router y TypeScript, **sin
+   ESLint ni ninguna otra herramienta**: las únicas dependencias son Next, React, TypeScript y
+   **Tailwind v4**, que es lo que D73 permitía y nada más. Los **tokens de D79 entran tal cual**
+   en `app/globals.css` —único lugar del frontend con un hex, con el tema oscuro por
+   `prefers-color-scheme` y sin interruptor—, el **rewrite local de `/api`** le da a desarrollo
+   el mismo origen único que Caddy da en producción, y **el armazón de cuatro piezas de D81 está
+   en pie y verificado en sus tres variantes**: visitante ("Crear tu diario" · Inicio), con sesión
+   ("Registrar" · Feed · Mi diario · Salir) y admin (la sección Panel). Están además los dos
+   clientes de la API con la caché separada por llamada, el arranque perezoso del token CSRF y
+   `lib/rutas.ts` con la regex del id. Decisión que hizo falta: **D82** (`lib/api/` se parte en
+   `<modulo>.servidor.ts` / `<modulo>.cliente.ts`, porque un archivo con las dos mitades no
+   compila), que además **cierra la comprobación que D78 había dejado pendiente**: el `401` de
+   `/api/auth/yo` sí trae `Set-Cookie: XSRF-TOKEN`. Y **D83**, que salió de auditar el paso: el
+   armazón vive en el grupo `app/(sitio)/` y no en la raíz —los layouts se anidan, así que con
+   el armazón arriba el panel no podría sacárselo nunca (D81)—, `yo()` va memoizada con
+   `cache()` porque **Next no pasa datos de un layout a sus hijos** y la ficha y el perfil
+   necesitan la sesión para elegir cliente, y el `5xx` de `/auth/yo` dibuja el armazón del
+   visitante en vez de tirar la pantalla entera.
+   ⚠️ **Lo que este paso deja anotado y no resuelve**, porque es de los pasos que siguen: la
+   home de `/` es provisoria (pantalla 1 en el paso 2, pantalla 2 en el paso 5), `not-found.tsx`
+   y `error.tsx` esperan a `EstadoVacio` (pantalla 13), el panel necesita su propio layout **sin
+   armazón** (paso 6), y el botón persistente con sesión **dispara un evento que todavía nadie
+   escucha**: la hoja del gesto es el paso 4.
 2. Pantallas públicas con SSR y Open Graph: ficha, artista, sala, en cartel, home visitante
    (HU-04/05/06). **Test de aceptación literal: pegar el link en WhatsApp y ver el preview.**
 3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas

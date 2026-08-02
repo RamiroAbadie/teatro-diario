@@ -1,15 +1,20 @@
 # Frontend Architecture
 
-> Estado: v1.1 — cierre del paso 0 de la Fase 4, corregido en su primera revisión (los `GET`
-> personalizados contra el feed, los dos contextos del `401`, las dos formas del `409` del alta,
-> las reglas de la semilla CSRF, la validación del id y cómo se sirven los afiches en desarrollo).
+> Estado: v1.3 — la v1.1 cerró el paso 0 de la Fase 4 y las dos siguientes la corrigen contra
+> el código del paso 1: **`lib/api/` pasa a un par de archivos por módulo** (v1.2, D82, y con
+> eso entra `errores.ts`), **la semilla del token CSRF deja de estar pendiente: se comprobó y
+> funciona**, y **el armazón baja de la raíz al grupo `(sitio)` para que el panel pueda no
+> llevarlo**, con la respuesta a cómo una página conoce la sesión (v1.3, D83). La v1.1 venía
+> de su primera revisión (los `GET` personalizados contra el feed, los dos contextos del `401`,
+> las dos formas del `409` del alta, las reglas de la semilla CSRF, la validación del id y cómo
+> se sirven los afiches en desarrollo).
 > **Este documento es al frontend lo que MODULE_MAP es al backend**: el que dice dónde va cada
 > cosa nueva. Existe porque eso fue lo que hizo rápida la Fase 1 —cuando aparecía algo
 > imprevisto, no había que decidir dónde ponerlo— y el frontend no tenía nada equivalente.
 >
 > Lo respalda **D78**. El contrato con el backend es `API.md`; los tokens y componentes son
-> `product/DESIGN_SYSTEM.md` (v1.1, D79/D81) y las pantallas `product/SCREEN_SPECS.md`
-> (v1.1, D80/D81).
+> `product/DESIGN_SYSTEM.md` (v1.2, D79/D81/D84) y las pantallas `product/SCREEN_SPECS.md`
+> (v1.2, D80/D81/D83).
 > **Con esos cuatro, el paso 0 de la Fase 4 está cerrado** (ROADMAP).
 
 ## Las cinco reglas innegociables
@@ -33,24 +38,28 @@ Si una sola cosa se lee de este documento, que sean estas. El resto es detalle:
 ```
 frontend/
   app/                          rutas (App Router). Una carpeta = una URL
-    layout.tsx                  el armazón de cuatro piezas (D81): cabecera, menú principal,
+    layout.tsx                  RAÍZ MÍNIMA: <html>, <body> y los tokens. Nada más (D83)
+    (sitio)/                    ← la frontera del armazón. El paréntesis NO cambia la URL
+      layout.tsx                el armazón de cuatro piezas (D81): cabecera, menú principal,
                                 bloque inferior (botón de registrar siempre presente, D71 +
                                 barra de destinos) y pie. Resuelve la sesión una sola vez
-    page.tsx                    home: feed si hay sesión, landing si no
-    obra/[slug]/page.tsx        ficha — SSR + Open Graph (crítico)
-    artista/[slug]/page.tsx
-    sala/[slug]/page.tsx
-    usuario/[username]/page.tsx perfil/diario — SSR + Open Graph (crítico)
-    en-cartel/page.tsx
-    buscar/page.tsx
-    sugerir/page.tsx
-    login/page.tsx  registro/page.tsx
-    admin/                      el panel: salas, personas, producciones, colas
-    not-found.tsx  error.tsx
+      page.tsx                  home: feed si hay sesión, landing si no
+      obra/[slug]/page.tsx      ficha — SSR + Open Graph (crítico)
+      artista/[slug]/page.tsx
+      sala/[slug]/page.tsx
+      usuario/[username]/page.tsx  perfil/diario — SSR + Open Graph (crítico)
+      en-cartel/page.tsx
+      buscar/page.tsx
+      sugerir/page.tsx
+      login/page.tsx  registro/page.tsx
+      not-found.tsx  error.tsx
+    admin/                      POR AFUERA de (sitio): su layout NO lleva armazón (D81)
+      layout.tsx                el panel: salas, personas, producciones, colas
+    not-found.tsx               ⏳ el 404 global — ver la advertencia de abajo
   components/
     ui/                         los 10 de DESIGN_SYSTEM.md (D79): tarjeta, fila, afiche,
                                 puntaje, chip, usuario, botón, estado vacío, aviso, confirmación
-    layout/                     el armazón, y sólo lo usa layout.tsx (D81):
+    layout/                     el armazón, y sólo lo usa (sitio)/layout.tsx (D81):
                                 Cabecera.tsx, MenuPrincipal.tsx, BloqueInferior.tsx,
                                 BarraDestinos.tsx
     <dominio>/                  compuestos: FichaCabecera, FilaDeDiario, ItemDeFeed...
@@ -58,11 +67,87 @@ frontend/
     api/                        ← el ÚNICO lugar con fetch
       client.ts                 navegador: CSRF, errores, mismo origen
       server.ts                 server components: URL interna, cookies, caché
-      catalogo.ts diario.ts social.ts identidad.ts admin.ts
+      errores.ts                las tres familias de API.md aplanadas, para los dos
+      <modulo>.servidor.ts      lecturas del SSR       ┐ catalogo · diario · social
+      <modulo>.cliente.ts       lo que pide el navegador ┘ identidad · admin (D82)
       tipos.ts                  los tipos de API.md, a mano
     rutas.ts                    construir y parsear /obra/{id}-{slug} (D74)
     formato.ts                  fecha difusa, puntaje, enums a castellano
 ```
+
+⚠️ **Por qué el armazón no está en el layout raíz** (D83). `SCREEN_SPECS.md` dice que las
+cuatro piezas están en todas las pantallas **salvo el panel**, y en el App Router **los
+layouts se anidan**: un `app/admin/layout.tsx` no reemplaza al de arriba, se mete adentro. Si
+el armazón viviera en la raíz, el panel lo llevaría puesto para siempre y sacárselo obligaría
+a mover el árbol de rutas entero. Por eso la raíz es `<html>`/`<body>` y nada más, el armazón
+vive en el grupo `(sitio)` y `admin/` cuelga por afuera. **Los paréntesis no cambian ninguna
+URL**: `(sitio)/page.tsx` sigue siendo `/`.
+
+⏳ **Consecuencia concreta para la pantalla 13, y no es opcional**: una URL que no matchea
+ninguna ruta usa el `app/not-found.tsx` de la **raíz**, que se dibuja con el layout mínimo.
+`SCREEN_SPECS.md` es explícito en que las dos pantallas de error **llevan el armazón completo**
+—"una 404 sin salidas es una pantalla muerta al final del Flujo 1"—, así que **ese archivo tiene
+que componerlo a mano**: pedir `yo()` y envolver el contenido en `Cabecera`, `Pie` y
+`BloqueInferior`, que son los mismos componentes de `components/layout/`. Dejarlo sin cabecera
+ni pie **no es una alternativa aceptable**: es la única salida que le queda a alguien que llegó
+por un link roto. El `notFound()` de una ficha o un perfil inexistente **no tiene este problema**:
+cae en el `not-found.tsx` de `(sitio)`, que ya está adentro del armazón.
+
+### Cómo sabe una página si hay sesión
+
+Es la pregunta que aparece apenas se escribe la segunda pantalla, porque de la respuesta
+depende **elegir entre `apiPublic` y `apiSession`** en la ficha y en el perfil (los dos ⚖️).
+
+**Next no pasa datos de un layout a sus hijos.** No hay props, no hay contexto de servidor, y
+subir la sesión a un contexto de cliente convertiría el armazón en cliente y rompería el SSR
+de ADR-003. La forma es la contraria: **la página vuelve a pedir el mismo dato**, y la
+llamada se paga una sola vez porque `yo()` está envuelta en **`cache()` de React**:
+
+```ts
+export const yo = cache(async (): Promise<Cuenta | null> => { ... });
+```
+
+`cache()` memoiza **por pedido**: el layout la llama para el armazón, la página la llama para
+elegir cliente, y la red se toca una vez. No es una caché entre pedidos —`apiSession` sigue
+siendo `no-store`— y muere con el render. **Sin esto, la frase "la sesión se resuelve una
+sola vez" sería falsa en cuanto una página la necesite.**
+
+De ahí sale la forma de las dos pantallas ⚖️:
+
+```ts
+const cuenta = await yo();
+const ficha = cuenta
+  ? await catalogo.fichaConSesion(id)   // apiSession, no-store
+  : await catalogo.fichaPublica(id);    // apiPublic, revalidate: 60
+```
+
+⚠️ **Y si `yo()` falla, se dibuja el armazón del visitante, no una pantalla de error** (D83).
+Sólo el `401` significa "anónimo", pero **el resto también degrada, y el alcance es más ancho
+de lo que suena**: no sólo el `5xx` y la red caída, sino **cualquier excepción que no sea
+control de Next ni el `401`** — un `403` inesperado, un cuerpo que no respeta el contrato, un
+bug de la propia función. Es a propósito: la regla no es "qué error fue", es **"el armazón
+nunca tira la pantalla abajo"**.
+
+Porque tirar desde el layout **no lo atrapa `error.tsx`** —a un error de layout lo agarra el
+límite del segmento de arriba—, así que cualquier fallo al resolver la sesión serviría la
+pantalla global de error en **todas** las URLs, incluidas las públicas que Next todavía puede
+servir de su caché de datos. Eso es justo lo que `SCREEN_SPECS.md` prohíbe para la ficha ("la
+degradación es por bloque"). **Medido, no supuesto: propagando, la home responde `500` y sin
+armazón.**
+
+Los dos costos, escritos: mientras el backend no responda, a alguien con sesión el armazón le
+va a decir "Crear tu diario" (se corrige solo: cualquier acción protegida se come su `401` y va
+al login); y **un bug de `yo()` se ve como "no hay sesión" y no como un error**, así que el
+`console.error` del servidor es el único lugar donde ese caso aparece.
+
+⚠️ **Por qué el par `servidor`/`cliente` y no un archivo por módulo** (D82). La regla no cambió
+—un módulo del backend, un cliente del frontend— pero **un archivo con las dos mitades no
+compila**: `server.ts` importa `next/headers`, y en cuanto un componente cliente importa una
+función de ese mismo archivo, Next lo mete en el bundle del navegador y el build corta. Casi
+todos los módulos tienen los dos lados (Identidad: `yo` en el servidor, `login`/`logout` en el
+navegador), así que el par es lo normal; un módulo con un solo lado tiene un solo archivo — el
+panel es todo cliente, así que es `admin.cliente.ts` y nada más. **El nombre del archivo dice
+desde dónde se puede importar**, que es lo que hace la regla imposible de romper por accidente.
 
 **`lib/api/` espeja los módulos del backend.** No es decoración: cuando algo no encaja en
 ninguno de los cinco archivos, casi siempre es porque tampoco encajaba en el backend y hay algo
@@ -73,21 +158,23 @@ segunda pantalla, y ahí pierde todo lo que sabía del dominio: `ui/` no conoce 
 
 **`components/layout/` es la excepción que confirma esa regla, no un agujero en ella** (D81). El
 menú principal y la barra de destinos parecen candidatos obvios a `ui/` porque se ven en las 13
-pantallas, pero **los usa `app/layout.tsx` una sola vez, para todas**: no hay una segunda pantalla
-que los repita, que es lo que la regla mide. Van acá, y **el listado de diez de `DESIGN_SYSTEM.md`
+pantallas, pero **los usa `app/(sitio)/layout.tsx` una sola vez, para todas**: no hay una segunda
+pantalla que los repita, que es lo que la regla mide. Van acá, y **el listado de diez de `DESIGN_SYSTEM.md`
 no cambia**. `BloqueInferior.tsx` es el contenedor fijo de abajo —el botón persistente arriba, la
 barra debajo, con el `border-top` y el `env(safe-area-inset-bottom)`— y existe porque esas dos
 piezas comparten posicionamiento y área segura: separarlas obliga a repetir el fijado en dos
 lugares y a mantenerlos sincronizados a mano. La barra y el menú son **islas cliente** (necesitan
 la ruta activa y el estado de abierto/cerrado); la cabecera y el bloque, no.
 
-⚠️ **La sesión se sigue resolviendo una sola vez, en el layout**, con `GET /api/auth/yo` por
-`apiSession` — el armazón nuevo **no agrega ni una llamada** ni pide una librería de estado
-global. De esa única respuesta salen las tres cosas que dependen de ella:
+⚠️ **La sesión se sigue resolviendo una sola vez por pedido, en `app/(sitio)/layout.tsx`**, con
+`GET /api/auth/yo` por `apiSession` — el armazón nuevo **no agrega ni una llamada** ni pide una
+librería de estado global. Que una página vuelva a llamar a `yo()` para elegir cliente tampoco
+la agrega: está memoizada con `cache()` (ver "Cómo sabe una página si hay sesión"). De esa única
+respuesta salen las tres cosas que dependen de ella:
 
 | Qué | Con sesión | Sin sesión |
 |---|---|---|
-| Etiqueta del botón persistente | "Registrar" (abre la hoja del gesto) | "Creá tu diario" (va a `/registro`) |
+| Etiqueta del botón persistente | "Registrar" (abre la hoja del gesto) | "Crear tu diario" (va a `/registro`) |
 | Celda **"Mi diario"** de la barra | sí, con el monograma de `Usuario` | **no existe**, y "Feed" se llama "Inicio" |
 | Sección **Panel** del menú principal | sólo si `rol === "ADMIN"` | no |
 
@@ -262,8 +349,19 @@ improvisan mal:
    `403`, se relee la cookie, se reintenta **una** vez, y si vuelve a fallar se muestra el error.
    Nada de bucle: un token que no sirve dos veces seguidas no se arregla insistiendo.
 
-⚠️ **Estado de la verificación de la semilla.** Que `GET /api/auth/yo` sirva como semilla se
-apoya hoy en el código, no en una prueba HTTP:
+✅ **Verificado** (paso 1 de la Fase 4, D82). Con el backend corriendo:
+
+```
+$ curl -si localhost:8080/api/auth/yo | grep -i 'HTTP/\|set-cookie'
+HTTP/1.1 401
+Set-Cookie: XSRF-TOKEN=8f2b422c-…; Path=/; SameSite=Lax
+```
+
+**El `401` de `/api/auth/yo` trae la cookie**, así que la semilla es la que estaba escrita y el
+reemplazo por `GET /api/en-cartel` no hace falta. Comprobado también a través del rewrite
+(`localhost:3000/api/auth/yo`), que es el camino real del navegador en desarrollo. Lo que sigue
+abajo es el razonamiento que sostenía la especificación antes de la prueba, y queda porque
+explica **por qué** funciona:
 
 - **Respaldado por el código** (`SecurityConfig` + Spring Security): el `CsrfFilter` corre
   **antes** del filtro de autorización, así que la petición pasa por él aunque termine en `401`.
@@ -274,12 +372,8 @@ apoya hoy en el código, no en una prueba HTTP:
   headers ya escritos. Y el mecanismo general ya está ejercitado sobre Tomcat real:
   `AutenticacionHttpTest` hace un `GET` y después un `POST` con el token que ese `GET` dejó.
   Lo que ninguna prueba cubre todavía es el caso puntual del `GET` que termina en `401`.
-- **Todavía pendiente**: un `curl` no mutante contra el backend corriendo que muestre
-  `Set-Cookie: XSRF-TOKEN` **en la respuesta 401 de `/api/auth/yo`** en concreto:
-  `curl -si localhost:8080/api/auth/yo | grep -i 'HTTP/\|set-cookie'`. Mientras eso no se corra,
-  **esta pieza de D78 queda especificada y no comprobada**. Si el `401` no la trajera, el
-  reemplazo ya identificado es `GET /api/en-cartel`, que el README usa como semilla en todos sus
-  ejemplos con `curl`; el resto de las cinco reglas no cambia.
+- **Lo que faltaba** era el `curl` de arriba, el caso puntual del `GET` que termina en `401`.
+  Ya está corrido: el razonamiento era correcto.
 
 Hacerlo perezoso y no al montar la app evita una llamada extra en cada visita anónima, que son
 casi todas, y cubre gratis los otros dos casos donde el token falta o quedó viejo: la cookie
