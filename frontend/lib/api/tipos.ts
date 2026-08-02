@@ -8,12 +8,103 @@
 
 export type Rol = "USUARIO" | "ADMIN";
 
+/** Los enums de `API.md`. Llegan crudos: traducirlos es del frontend (`lib/formato.ts`). */
+export type EstadoProduccion = "EN_CARTEL" | "CERRADA" | "PROXIMAMENTE";
+export type RolParticipacion = "ACTUACION" | "DIRECCION" | "DRAMATURGIA";
+export type Granularidad = "DIA" | "MES" | "ANIO" | "SIN_FECHA";
+
 /** `CuentaResponse`: lo que devuelven registro, login y `GET /api/auth/yo`. */
 export type Cuenta = {
   id: number;
   username: string;
   email: string;
   rol: Rol;
+};
+
+/* ============================================================
+   Catálogo — las cuatro lecturas públicas de `API.md`
+   ============================================================ */
+
+export type Sala = { id: number; nombre: string; complejo: string | null };
+
+export type Persona = { id: number; nombre: string };
+
+/**
+ * **Resumen de producción**: la forma corta que devuelven en-cartel, artista, sala,
+ * búsqueda y el listado del admin.
+ *
+ * ⚠️ `aficheUrl` va **opcional** y no `string | null` a propósito: el contrato lo promete
+ * (D77) pero **el backend todavía no lo manda** —es uno de los dos ⏳ de `API.md`—, así que
+ * hoy llega `undefined` y no `null`. Escribirlo obligatorio sería un tipo que miente sobre
+ * lo que hay del otro lado; el día que exista, el campo ya está y nada cambia.
+ */
+export type ProduccionResumen = {
+  id: number;
+  titulo: string;
+  estado: EstadoProduccion;
+  aficheUrl?: string | null;
+  sala: Sala | null;
+};
+
+export type Participacion = { id: number; persona: Persona; rol: RolParticipacion };
+
+/** `GET /api/producciones/{id}`. **No trae promedio ni reseñas**: eso es Diario (D60). */
+export type Ficha = {
+  id: number;
+  titulo: string;
+  sinopsis: string | null;
+  obraOriginal: string | null;
+  autorOriginal: string | null;
+  estado: EstadoProduccion;
+  aficheUrl?: string | null;
+  sala: Sala | null;
+  participaciones: Participacion[];
+};
+
+/** `GET /api/personas/{id}`. Sin foto y sin bio, a propósito (D14). */
+export type Artista = {
+  id: number;
+  nombre: string;
+  participaciones: { id: number; rol: RolParticipacion; produccion: ProduccionResumen }[];
+};
+
+/** `GET /api/salas/{id}`. Sin dirección, sin mapa y sin horarios: no hay agenda (X4). */
+export type SalaPublica = Sala & { enCartel: ProduccionResumen[] };
+
+/** `GET /api/en-cartel`. Las dos listas en una respuesta, en el orden que las manda (D8). */
+export type EnCartel = { enCartel: ProduccionResumen[]; proximamente: ProduccionResumen[] };
+
+/* ============================================================
+   Diario — la otra mitad de la ficha (D60)
+   ============================================================ */
+
+/** Una reseña de la ficha. `autor` es `null` si esa cuenta ya no existe. */
+export type ReseniaDeFicha = {
+  registroId: number;
+  autor: string | null;
+  texto: string | null;
+  rating: number | null;
+  fecha: string | null;
+  granularidad: Granularidad;
+  likes: number;
+  /** Convención de tres estados: `null` es "no hay botón que dibujar" (D68). */
+  leDiLike: boolean | null;
+  creadoEn: string;
+};
+
+/**
+ * `GET /api/producciones/{id}/opiniones`. **Abierto pero personalizado**: con cookie agrega
+ * `leDiLike` en cada reseña y `vecesQueLaVi` ⏳ — por eso lo pide `apiPublic` o `apiSession`
+ * según la llamada, y nunca se cachea una respuesta pedida con cookie (D78).
+ *
+ * ⚠️ `promedio` es el **último rating de cada usuario** (D20), no un `AVG`, y `null` cuando
+ * nadie puntuó. `vecesQueLaVi` es opcional por lo mismo que `aficheUrl`: es el otro ⏳ (D76).
+ */
+export type Opiniones = {
+  promedio: number | null;
+  cantidadRatings: number;
+  vecesQueLaVi?: number | null;
+  resenias: ReseniaDeFicha[];
 };
 
 /**

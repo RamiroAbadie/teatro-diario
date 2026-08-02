@@ -119,8 +119,33 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    y `error.tsx` esperan a `EstadoVacio` (pantalla 13), el panel necesita su propio layout **sin
    armazón** (paso 6), y el botón persistente con sesión **dispara un evento que todavía nadie
    escucha**: la hoja del gesto es el paso 4.
-2. Pantallas públicas con SSR y Open Graph: ficha, artista, sala, en cartel, home visitante
-   (HU-04/05/06). **Test de aceptación literal: pegar el link en WhatsApp y ver el preview.**
+2. ~~Pantallas públicas con SSR y Open Graph: ficha, artista, sala, en cartel, home visitante
+   (HU-04/05/06).~~ **HECHO.** Las cinco existen y son **Server Components enteros**, con una
+   sola isla cliente en todo el paso: el **"Reintentar"**, que usan el bloque de opiniones de
+   la ficha y el error de "en cartel" —reintentar es volver a pedirle la pantalla al servidor,
+   y eso es `router.refresh()`—. Entran con ellas los seis
+   componentes de `ui/` que faltaban —`Tarjeta`, `Fila`, `Afiche`, `Puntaje`, `Chip`,
+   `EstadoVacio`—, `lib/formato.ts` (fecha difusa de D59, enums, coma decimal) y los clientes
+   de Catálogo y Diario del lado servidor. La **ficha hace sus dos llamadas** (D60) y
+   **degrada por bloque**: si fallan las opiniones, la ficha se muestra igual. La URL de D74
+   está entera: el id se valida con la regex, un slug viejo o ausente redirige `308` a la
+   canónica, y un id que no es entero positivo es `notFound()`. **Cierra de paso la pantalla
+   13**, que el paso 1 había dejado esperando a `EstadoVacio`: el `404` de `(sitio)`, el
+   `error.tsx` —que vive adentro del grupo, porque en la raíz se dibujaría sin armazón— y el
+   **404 global, que compone las cuatro piezas a mano** como exigía D83. Decisiones que
+   hicieron falta: **D85** (la placa de `og:image` con `next/og` + una Noto Serif subseteada
+   de 30 KB embebida, ruta propia `/og/{tipo}/{id}` en vez del `opengraph-image.tsx`
+   convencional, y `metadataBase`, que es lo que hace absolutas las URLs del preview) y
+   **D86** (dos correcciones de la celda de la grilla que sólo se vieron renderizadas).
+   ⚠️ **Y una limitación medida, anotada como P18**: el `notFound()` de una ficha y el
+   `error.tsx` **sólo se pintan con JavaScript** —el estado HTTP es correcto y con JS se ve la
+   pantalla entera, pero sin JS el cuerpo llega vacío—. El 404 global sí llega en el HTML.
+   ⚠️ **El test de aceptación literal —pegar el link en WhatsApp— no se puede correr todavía**:
+   necesita una URL pública, o sea la Fase 5. Lo que sí está verificado es lo que lo sostiene:
+   los `<meta>` con URL absoluta y la placa de 1200×630 generada y mirada en los dos casos
+   (título corto y título de 79 caracteres). **Y sigue pendiente la verificación de D81**: la
+   ficha con el afiche a 60 vh contra el cromo del armazón — no se puede medir hasta que haya
+   un afiche (P16), y hoy la ficha sin afiche cambia de forma y entra sobrada.
 3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas
    que no cierran: la subida de afiches con redimensionado y versionado (HU-20, D72/D77,
    adelantada desde la Fase 5), el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice`

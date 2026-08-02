@@ -1,6 +1,13 @@
 # Frontend Architecture
 
-> Estado: v1.3 — la v1.1 cerró el paso 0 de la Fase 4 y las dos siguientes la corrigen contra
+> Estado: v1.4 — el paso 2 de la Fase 4 (las pantallas públicas) agrega **tres piezas que la
+> estructura no nombraba** y una regla de metadatos: `lib/formato.ts` ya estaba anotado y ahora
+> existe, entran **`lib/metadatos.ts`** (los seis campos de Open Graph, una sola vez),
+> **`lib/og.ts` + `app/og/{tipo}/{id}`** (la placa, D85) y **`frontend/assets/`**, que es la
+> única carpeta del frontend con un binario: la serif subseteada que satori necesita.
+> Lo anterior no cambia.
+>
+> La v1.1 cerró el paso 0 de la Fase 4 y las dos siguientes la corrigen contra
 > el código del paso 1: **`lib/api/` pasa a un par de archivos por módulo** (v1.2, D82, y con
 > eso entra `errores.ts`), **la semilla del token CSRF deja de estar pendiente: se comprobó y
 > funciona**, y **el armazón baja de la raíz al grupo `(sitio)` para que el panel pueda no
@@ -55,14 +62,19 @@ frontend/
       not-found.tsx  error.tsx
     admin/                      POR AFUERA de (sitio): su layout NO lleva armazón (D81)
       layout.tsx                el panel: salas, personas, producciones, colas
-    not-found.tsx               ⏳ el 404 global — ver la advertencia de abajo
+    og/[tipo]/[id]/route.tsx    la placa de og:image, 1200×630 (D85). UNA ruta para los
+                                tres tipos: obra · artista · sala
+    not-found.tsx               el 404 global — compone el armazón a mano (ver abajo)
+  assets/                       la ÚNICA carpeta con un binario: la serif subseteada que
+                                satori necesita para dibujar la placa, con su licencia OFL
+                                al lado. El navegador no la descarga nunca (D85)
   components/
     ui/                         los 10 de DESIGN_SYSTEM.md (D79): tarjeta, fila, afiche,
                                 puntaje, chip, usuario, botón, estado vacío, aviso, confirmación
     layout/                     el armazón, y sólo lo usa (sitio)/layout.tsx (D81):
                                 Cabecera.tsx, MenuPrincipal.tsx, BloqueInferior.tsx,
                                 BarraDestinos.tsx
-    <dominio>/                  compuestos: FichaCabecera, FilaDeDiario, ItemDeFeed...
+    <dominio>/                  compuestos: GrillaDeProducciones, Elenco, Resenias...
   lib/
     api/                        ← el ÚNICO lugar con fetch
       client.ts                 navegador: CSRF, errores, mismo origen
@@ -73,6 +85,8 @@ frontend/
       tipos.ts                  los tipos de API.md, a mano
     rutas.ts                    construir y parsear /obra/{id}-{slug} (D74)
     formato.ts                  fecha difusa, puntaje, enums a castellano
+    metadatos.ts                los seis campos de Open Graph + metadataBase (D85)
+    og.ts                       cómo se nombra la placa desde generateMetadata (D85)
 ```
 
 ⚠️ **Por qué el armazón no está en el layout raíz** (D83). `SCREEN_SPECS.md` dice que las
@@ -83,7 +97,7 @@ a mover el árbol de rutas entero. Por eso la raíz es `<html>`/`<body>` y nada 
 vive en el grupo `(sitio)` y `admin/` cuelga por afuera. **Los paréntesis no cambian ninguna
 URL**: `(sitio)/page.tsx` sigue siendo `/`.
 
-⏳ **Consecuencia concreta para la pantalla 13, y no es opcional**: una URL que no matchea
+✅ **Consecuencia concreta para la pantalla 13, y no es opcional — hecha en el paso 2**: una URL que no matchea
 ninguna ruta usa el `app/not-found.tsx` de la **raíz**, que se dibuja con el layout mínimo.
 `SCREEN_SPECS.md` es explícito en que las dos pantallas de error **llevan el armazón completo**
 —"una 404 sin salidas es una pantalla muerta al final del Flujo 1"—, así que **ese archivo tiene
@@ -254,6 +268,23 @@ del feed. Una ficha es servidor con dos islas cliente adentro, no una pantalla c
 `generateMetadata` en las cuatro páginas compartibles. Título, descripción y `og:image` con el
 afiche cuando exista (D77) o la imagen tipográfica de respaldo cuando no (D71) — que no es un
 detalle estético: es la mitad de la mecánica de crecimiento.
+
+Cómo está armado (D85), que son tres piezas y ninguna es opcional:
+
+| Pieza | Qué hace | Qué pasa si falta |
+|---|---|---|
+| `lib/metadatos.ts` | los seis campos, una sola vez, para las cuatro pantallas | se desincronizan y no se nota: el preview roto se ve recién al pegar el link |
+| `app/og/{tipo}/{id}` | dibuja la placa 1200×630 con `next/og`, **siempre oscura** | sin afiches (P16) el catálogo entero queda sin imagen |
+| `metadataBase` (`SITIO_URL`) | hace **absolutos** el `og:image` y el `canonical` | Next los emite relativos y **WhatsApp no los resuelve**: preview sin imagen |
+
+⚠️ **La placa es una ruta y no el `opengraph-image.tsx` convencional de Next**, y el motivo es
+la regla de D79: **cuando la ficha tenga afiche, el `og:image` es el afiche tal cual**. El
+archivo convencional gana sobre lo que devuelva `generateMetadata`, así que esa elección no se
+podría escribir; con una ruta que se nombra desde ahí, queda en una línea al lado del `??`.
+
+⚠️ **Y la serif de la placa va embebida en `assets/`**: satori —el motor de `next/og`— **no lee
+fuentes del sistema**, sólo dibuja con los bytes que se le pasan, y por defecto trae una sans.
+**No es una webfont**: el navegador no la descarga nunca y "cero webfonts" (D79) sigue en pie.
 
 ### Cómo viaja la sesión
 

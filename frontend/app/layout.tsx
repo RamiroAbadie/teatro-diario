@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { SITIO } from "@/lib/metadatos";
+
 import "./globals.css";
 
 /**
@@ -25,10 +27,38 @@ import "./globals.css";
  */
 
 export const metadata: Metadata = {
+  // ⚠️ **`metadataBase` es lo que hace absolutos los `og:image` y los `canonical`.** Sin él,
+  // Next emite rutas relativas y **el preview de WhatsApp se queda sin imagen**: el servidor
+  // que lo arma no está en nuestro origen y no tiene contra qué resolverlas. Es la pieza que
+  // sostiene el test literal de HU-04 y no se ve en ninguna pantalla.
+  metadataBase: SITIO,
   // Sin nombre de producto: P2 sigue abierto. La frase funciona sola y el día que P2
   // cierre se le pone el nombre encima sin tocar el resto (D79, regla 3).
-  title: "Diario de teatro",
+  title: { default: "Diario de teatro", template: "%s · Diario de teatro" },
   description: "El diario de tu teatro de acá en adelante.",
+
+  // ⚠️ **El Open Graph genérico del sitio va acá y no en la home**, y sin esto la home no
+  // tiene ninguno: Next **no deduce `og:*` de `title` y `description`** — sólo emite lo que
+  // encuentra en `openGraph`. Puesto en la raíz cubre de una vez la pantalla 1 (que
+  // `SCREEN_SPECS.md` pide con OG genérico) y cualquier pantalla futura que no traiga el
+  // suyo; las cuatro compartibles lo pisan entero con `metadatosCompartibles`.
+  //
+  // **Sin `og:image` a propósito**: la placa de D85 se dibuja con el título de una ficha, un
+  // artista o una sala, y acá no hay ninguno — una placa genérica sería una imagen de marca,
+  // que es justo lo que P2 no cerró todavía. El preview de la home queda con título y
+  // descripción, que es degradado y no roto (`SCREEN_SPECS.md`).
+  openGraph: {
+    title: "Diario de teatro",
+    description: "El diario de tu teatro de acá en adelante.",
+    url: "/",
+    type: "website",
+    locale: "es_AR",
+  },
+  twitter: {
+    card: "summary",
+    title: "Diario de teatro",
+    description: "El diario de tu teatro de acá en adelante.",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

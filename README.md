@@ -84,8 +84,10 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 ## Estado actual
 
 **Fase 4 en curso — el frontend.** El backend cubre las 22 historias y está probado; lo que
-se está escribiendo ahora son las pantallas. Todavía no hay casi nada que puedas *usar*: hay
-una API que responde y un armazón que la envuelve. Al backend le quedan **tres cosas de esta
+se está escribiendo ahora son las pantallas. **Ya están las públicas**: en cartel, la ficha de
+una obra, la página de artista, la de sala y la home del visitante — con SSR y con el preview
+que se ve al compartir el link. Lo que todavía no podés hacer es tener cuenta y usarla desde
+el navegador: entrar, registrar lo que viste y ver tu diario son los pasos que siguen. Al backend le quedan **tres cosas de esta
 misma fase**: la subida de afiches (D77, bloqueada por P16), el `vecesQueLaVi` de la ficha
 (D76) y un `@ControllerAdvice` que unifique las respuestas de error.
 
@@ -109,14 +111,16 @@ Lo que funciona hoy:
   módulos que no se conocen entre sí
 - **Likes a reseñas**, **sugerencias** —la válvula del catálogo cerrado: el usuario propone,
   el admin aprueba o rechaza— y **reportes**, con su cola de moderación
-- **El esqueleto del frontend**: Next con el armazón de navegación, los tokens de diseño y
-  los dos clientes de la API. Todavía **sin pantallas**: son lo que sigue
+- **Las pantallas públicas** (Next, con render en el servidor): "en cartel", la ficha con su
+  promedio y sus reseñas, la página de artista, la de sala y la home del visitante — más el
+  404 y la pantalla de error, con sus salidas. Cada link compartido lleva su propia imagen de
+  preview, generada con el título cuando la ficha no tiene afiche todavía
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| **Las pantallas**: ficha, perfil, en cartel, búsqueda, el gesto de registro, el panel | Fase 4 (lo que queda) |
+| **Las pantallas que piden cuenta**: alta y login, el gesto de registro, el diario, el feed, la búsqueda y el panel | Fase 4 (lo que queda) |
 | Subida de afiches | Fase 4, cuando cierre P16 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
 
@@ -326,7 +330,7 @@ primer commit y nunca hubo una credencial en el repo (D48).
 
 ```
 backend/         Spring Boot: los cuatro módulos + la capa de aplicación
-frontend/        Next (App Router) + Tailwind: app/ rutas, components/ y lib/api/
+frontend/        Next (App Router) + Tailwind: app/ rutas, components/, lib/ y assets/
 docs/            toda la documentación fundacional — empezá por docs/README.md
 caddy/           config del reverse proxy (congelada hasta la fase de deploy)
 docker-compose.yml

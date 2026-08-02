@@ -44,13 +44,26 @@ Y el porqué de todo está en
    jamás. Confundirlos sirve la página de una persona a otra.
 5. **Las mutaciones las hace el navegador contra Spring.** Sin Server Actions.
 
-## Dos cosas de la estructura que no se ven solas
+## Tres cosas de la estructura que no se ven solas
 
 - **`app/(sitio)/` es la frontera del armazón.** El layout raíz es `<html>`/`<body>` y nada
   más, porque los layouts del App Router se anidan y el panel admin **no lleva armazón**
   (D81): si estuviera arriba, no habría forma de sacárselo. Los paréntesis no cambian la URL.
 - **`lib/api/<modulo>.servidor.ts` y `.cliente.ts`** (D82): el nombre del archivo dice desde
   dónde se puede importar. Un archivo con las dos mitades no compila.
+- **`assets/` tiene la única fuente del repo, y no es una webfont** (D85). Es un Noto Serif
+  subseteado que usa `app/og/[tipo]/[id]` para dibujar la placa de `og:image`: satori no lee
+  fuentes del sistema. **El navegador no la descarga nunca** y el sitio sigue con las dos
+  familias del sistema.
+
+## Variables de entorno
+
+Ninguna es obligatoria en desarrollo; las dos tienen un valor por defecto que sirve local.
+
+| | Para qué | Default |
+|---|---|---|
+| `BACKEND_INTERNAL_URL` | a dónde llaman los Server Components y el rewrite de `/api` | `http://localhost:8080` |
+| `SITIO_URL` | el origen público: **hace absolutos el `og:image` y el `canonical`**, sin lo cual WhatsApp no resuelve el preview | `http://localhost:3000` |
 
 ## Dependencias
 
