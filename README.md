@@ -83,8 +83,11 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 
 ## Estado actual
 
-**Fase 3 en curso — lo social.** Todavía no hay nada que puedas *usar*: hay una API que
-responde.
+**Fase 4 en curso — el frontend.** El backend cubre las 22 historias y está probado; lo que
+se está escribiendo ahora son las pantallas. Todavía no hay casi nada que puedas *usar*: hay
+una API que responde y un armazón que la envuelve. Al backend le quedan **tres cosas de esta
+misma fase**: la subida de afiches (D77, bloqueada por P16), el `vecesQueLaVi` de la ficha
+(D76) y un `@ControllerAdvice` que unifique las respuestas de error.
 
 Lo que funciona hoy:
 
@@ -104,13 +107,17 @@ Lo que funciona hoy:
   logueada con lo que registraron los que seguís —o la actividad de toda la plataforma, si
   todavía no seguís a nadie—. El feed no es una tabla: se arma al leer, componiendo tres
   módulos que no se conocen entre sí
+- **Likes a reseñas**, **sugerencias** —la válvula del catálogo cerrado: el usuario propone,
+  el admin aprueba o rechaza— y **reportes**, con su cola de moderación
+- **El esqueleto del frontend**: Next con el armazón de navegación, los tokens de diseño y
+  los dos clientes de la API. Todavía **sin pantallas**: son lo que sigue
 
 Lo que todavía no existe, a propósito y en este orden:
 
 | | Cuándo |
 |---|---|
-| Likes, sugerencias y reportes | Fase 3 (lo que queda) |
-| **Frontend** (no hay carpeta `/frontend` todavía) | Fase 4 |
+| **Las pantallas**: ficha, perfil, en cartel, búsqueda, el gesto de registro, el panel | Fase 4 (lo que queda) |
+| Subida de afiches | Fase 4, cuando cierre P16 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
 
 La regla del roadmap es que las herramientas entran **cuando aparece su problema**, no por
@@ -129,7 +136,7 @@ Detalle completo en [docs/roadmap/ROADMAP.md](docs/roadmap/ROADMAP.md).
 |---|---|
 | Backend | Java 21 + Spring Boot (+ Spring Modulith para verificar los límites) |
 | Base de datos | PostgreSQL — la búsqueda del MVP se resuelve con `pg_trgm`, sin motor aparte |
-| Frontend | Next.js (React + SSR), decidido pero todavía no empezado |
+| Frontend | Next.js (App Router, SSR) + Tailwind — **única dependencia de UI**: los componentes se escriben a mano |
 | Infra | Docker Compose sobre un VPS chico + Caddy para HTTPS |
 
 Cuatro módulos dentro de un **monolito modular** (ADR-001): `identidad`, `catalogo`,
@@ -153,7 +160,7 @@ Dos reglas de dominio que parecen detalles y no lo son:
 
 ## Correrlo local
 
-Hace falta Java 21 y Docker.
+Hace falta Java 21, Node 20+ y Docker.
 
 ```bash
 git clone https://github.com/RamiroAbadie/teatro-diario.git
@@ -168,6 +175,19 @@ DB_PASSWORD=$(grep DB_PASSWORD ../.env | cut -d= -f2) ./mvnw spring-boot:run
 ```
 
 Queda escuchando en `http://localhost:8080`. Las tablas se crean solas al arrancar.
+
+Y en otra terminal, el frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Queda en `http://localhost:3000`. En desarrollo no hay Caddy, así que Next reenvía `/api` a
+Spring con un rewrite: el navegador ve **un solo origen**, igual que en producción, y la
+cookie de sesión y el token CSRF se comportan como se van a comportar de verdad. Todo lo de
+abajo también funciona contra `localhost:3000` en vez de `:8080`.
 
 Leer el catálogo no pide nada (todo el contenido es público, D21):
 
@@ -306,6 +326,7 @@ primer commit y nunca hubo una credencial en el repo (D48).
 
 ```
 backend/         Spring Boot: los cuatro módulos + la capa de aplicación
+frontend/        Next (App Router) + Tailwind: app/ rutas, components/ y lib/api/
 docs/            toda la documentación fundacional — empezá por docs/README.md
 caddy/           config del reverse proxy (congelada hasta la fase de deploy)
 docker-compose.yml

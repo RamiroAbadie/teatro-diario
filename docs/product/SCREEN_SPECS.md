@@ -1,11 +1,14 @@
 # Screen Specs
 
-> Estado: v1.1 — **cierra el paso 0 de la Fase 4**. Es el cuarto y último de los documentos que
-> van antes de la primera pantalla, después de `architecture/API.md` (v1.2),
-> `architecture/FRONTEND_ARCHITECTURE.md` (v1.1) y `product/DESIGN_SYSTEM.md` (v1.1).
-> Lo respalda **D80**, y la v1.1 **D81**: el armazón pasa de tres piezas a cuatro (menú principal
-> y barra de destinos), que es lo único que cambió — ninguna pantalla nueva, el alcance sigue
-> congelado.
+> Estado: v1.2 — la v1.0 cerró el paso 0 de la Fase 4; es el cuarto y último de los documentos
+> que van antes de la primera pantalla, después de `architecture/API.md` (v1.2),
+> `architecture/FRONTEND_ARCHITECTURE.md` (v1.3) y `product/DESIGN_SYSTEM.md` (v1.2).
+> Lo respalda **D80**; la v1.1 **D81** (el armazón pasa de tres piezas a cuatro: menú principal
+> y barra de destinos — ninguna pantalla nueva, el alcance sigue congelado) y la v1.2 **D83**,
+> que corrige contra el código del paso 1 **dónde vive el armazón**: es
+> `app/(sitio)/layout.tsx` y no el layout raíz, porque los layouts del App Router se anidan y el
+> panel es la excepción de esa misma frase. Con eso, **el 404 global pasa a tener trabajo propio
+> en la pantalla 13**. Ninguna pantalla cambia de contenido.
 >
 > **Qué es:** una entrada por cada una de las 13 pantallas de `USER_FLOWS.md` (más las cinco
 > caras del panel), con qué datos pide, cómo se compone, qué isla es cliente y **qué se ve en
@@ -33,7 +36,13 @@ Convenciones de las tablas:
 
 ## Reglas transversales (se definen acá una vez y valen en las 13)
 
-### El armazón: `app/layout.tsx`
+### El armazón: `app/(sitio)/layout.tsx`
+
+⚠️ **No es el layout raíz, y por eso está escrito así** (D83). El raíz es `<html>`/`<body>` y
+los tokens, nada más: los layouts del App Router **se anidan**, así que si el armazón viviera
+arriba, el panel —que es justo la excepción de la frase que sigue— no tendría forma de
+sacárselo. El armazón vive en el grupo `(sitio)` y `app/admin/` cuelga por afuera con el suyo.
+**Los paréntesis no cambian ninguna URL.**
 
 **Cuatro piezas**, presentes en todas las pantallas salvo el panel (D81). La de abajo es **un
 bloque con dos partes** —el botón persistente y, debajo, la barra de destinos— y por eso se cuenta
@@ -52,14 +61,16 @@ verdad:**
 | Sesión | Etiqueta | Qué hace |
 |---|---|---|
 | Con sesión | **"Registrar"** (primario) | abre la hoja del gesto (pantalla 9) |
-| Sin sesión | **"Creá tu diario"** (primario) | va a `/registro` |
+| Sin sesión | **"Crear tu diario"** (primario) | va a `/registro` |
 
 Así el botón que D71 pide que esté siempre presente **nunca abre un formulario que va a rebotar
 en un `401`**: para el anónimo es directamente el CTA de adquisición del Flujo 1, que es lo que
 esa pantalla necesitaba igual (hueco 2 de USER_FLOWS). Un solo control, dos productos.
 
-La sesión se resuelve **una sola vez, en el layout**, con `GET /api/auth/yo` por `apiSession`
-(`FRONTEND_ARCHITECTURE.md`: no hay librería de estado global; la sesión baja del servidor). Su
+La sesión se resuelve **una sola vez por pedido, en `app/(sitio)/layout.tsx`**, con
+`GET /api/auth/yo` por `apiSession` (`FRONTEND_ARCHITECTURE.md`: no hay librería de estado
+global; la sesión baja del servidor, y `yo()` está memoizada con `cache()` para que la ficha y
+el perfil puedan volver a pedirla sin una llamada más). Su
 `401` **no se muestra y no navega**: es "anónimo", que es el estado de la mayoría de las visitas.
 De esa única respuesta salen **las tres cosas del armazón que dependen de la sesión**: la etiqueta
 del botón persistente, si la barra tiene celda **"Mi diario"**, y si el menú principal dibuja la
@@ -137,7 +148,7 @@ existe: el botón persistente vuelve a la cabecera, a la derecha, como ya decía
 ### El CTA de crear cuenta en pantallas públicas
 
 Criterio transversal de las pantallas **1, 3, 4, 6 y 8** (hueco 2 de USER_FLOWS). Se resuelve
-**con el botón persistente y nada más**: sin sesión ya dice "Creá tu diario" y está fijo abajo en
+**con el botón persistente y nada más**: sin sesión ya dice "Crear tu diario" y está fijo abajo en
 el celular. **No hay banners de registro adicionales, ni interstitials, ni un segundo CTA al
 final del scroll**: el visitante que sólo mira es la mitad del Flujo 1 y molestarlo es perderlo.
 
@@ -234,7 +245,7 @@ como texto).
 | Error | `5xx` → la sección de en cartel no se dibuja; el titular y el CTA sí. Una portada rota es peor que una portada corta |
 | Sin sesión | **es la pantalla del sin sesión.** Con cookie, esta ruta es la pantalla 2 |
 
-**Criterios**: carga sin cookie, con caché de 300 s · el CTA "Creá tu diario" es visible sin
+**Criterios**: carga sin cookie, con caché de 300 s · el CTA "Crear tu diario" es visible sin
 scrollear en un celular de 360×640 · desde acá se llega a una ficha en un toque.
 
 ---
