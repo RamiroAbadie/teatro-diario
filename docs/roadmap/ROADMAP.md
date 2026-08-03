@@ -159,17 +159,29 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    con forma y sin tripas. Los errores de dominio no se movieron: la forma se unifica, el
    significado lo sigue decidiendo el endpoint. **79 tests en verde**, `ModulithArchitectureTest`
    incluido: el advice no nombra una sola clase interna de un módulo.
-   **Falta la segunda entrega: la subida de afiches** con redimensionado y versionado (HU-20,
-   D72/D77, adelantada desde la Fase 5).
-   ✅ **Ya se puede empezar**: lo que la bloqueaba era **P16**, y el fundador cerró lo que
-   bloqueaba —**TwelveMonkeys** para decodificar (Java puro, sin binarios nativos, y acepta los
-   tres formatos de entrada que promete `API.md`) y **salida JPEG**, porque no existe un escritor
-   de WebP en Java puro—. Eso **cambia la URL pública de `.webp` a `.jpg` y enmienda D77**. Lo que
-   queda de P16 se cierra con el código: calidad, orientación EXIF y tope de píxeles
-   decodificados, que es el único de los tres que es de seguridad y no de calidad —los 5 MB son
-   del archivo comprimido y no acotan la memoria—. La parte que dependía del diseño ya estaba:
-   D79 fijó las dimensiones (caja de origen 1200×1600 **sin recortar**, un solo archivo, el
-   recorte de la grilla lo hace CSS).
+   ~~La segunda entrega: la subida de afiches~~ **HECHO también, y con eso cierra el paso 3.**
+   `POST` y `DELETE /api/admin/producciones/{id}/afiche` con el contrato de D77 entero: el
+   **contador monótono** que nunca se reinicia ni se reutiliza —lo que hace que el `immutable` de
+   un año no sea una mentira—, `afiche_actual` separado de él, el orden de las cuatro operaciones
+   (reservar → escribir → publicar → borrar el viejo) con **la reserva en una sola sentencia
+   atómica**, **la publicación con la fila bloqueada** y **el borrado del archivo después del
+   commit y fuera de la transacción**, y el `DELETE` idempotente. Los tests que el contrato
+   exigía son **12**, y los tres que importan más que el camino feliz son el del contador que no
+   se reinicia y los **dos solapamientos forzados**, que son deterministas porque llaman a las
+   piezas de a una: por HTTP la ventana dura lo que tarda un `update` y el test pasaría por
+   suerte. **91 tests en verde.**
+   ✅ **P16 quedó cerrada en D88**: **TwelveMonkeys** para leer (Java puro, sin binarios nativos;
+   acepta los tres formatos que promete `API.md` y no se planta con los JPEG CMYK de imprenta) y
+   **JPEG a la salida**, porque no existe un escritor de WebP en Java puro. Eso **cambia la URL
+   pública de `.webp` a `.jpg` y enmienda D77 en ese punto y en ningún otro**. Lo demás de P16
+   también: 1200×1600 sin recortar y sin agrandar (D79), calidad 0,82, EXIF aplicado al subir y
+   archivo guardado sin metadatos, y un **tope de 50 MP comprobado leyendo la cabecera antes de
+   decodificar** —lo único de la lista que es de seguridad: los 5 MB son del archivo comprimido y
+   no acotan la memoria—.
+   ⚠️ **Lo que de los afiches sigue pendiente es de la Fase 5 y está anotado allá**: que Caddy
+   sirva `/afiches` desde el volumen, y que ese volumen tenga su propio backup (D45/D77). En
+   desarrollo ya funciona sin nada de eso: Spring escribe en `frontend/public/afiches/` y lo
+   sirve Next como estático (D78).
 4. Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
    gesto de registro con autocompletado y el desvío a sugerir sin perder lo tipeado
    (HU-08/09/10), editar y borrar con confirmación (HU-11).

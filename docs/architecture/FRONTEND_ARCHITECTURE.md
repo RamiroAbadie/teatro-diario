@@ -1,6 +1,12 @@
 # Frontend Architecture
 
-> Estado: v1.5 — el paso 3 de la Fase 4 (lo que le quedaba al backend) toca **una sola sección**:
+> Estado: v1.6 — la segunda mitad del paso 3 de la Fase 4 (los afiches) confirma **sin cambios**
+> lo que este documento ya decía: en desarrollo los escribe Spring en `frontend/public/afiches/`
+> —el directorio es configurable, y así quedó— y los sirve Next como estático, sin rewrite. Lo
+> único que cambia es la extensión: **`.jpg` y no `.webp`** (D88). El directorio va al
+> `.gitignore`, como estaba escrito.
+>
+> La v1.5 — el paso 3 de la Fase 4 (lo que le quedaba al backend) toca **una sola sección**:
 > los errores. El backend unificó las tres familias en una (D87), así que la sección lo dice y la
 > fila del `400` sin `errores` deja de ser el caso normal del panel admin. **Ninguna regla del
 > frontend cambia**: `client.ts` aplana igual y el contexto sigue siendo lo que decide qué hacer
@@ -439,12 +445,12 @@ aplicación). Un rewrite hacia `http://localhost:8080/afiches/...` apuntaría a 
 y los sirve Next como cualquier archivo estático de `public/`.** El directorio de subida ya tiene
 que ser configurable —en producción es el volumen—, así que en desarrollo se lo apunta ahí y no
 hace falta nada más: cero código nuevo, cero herramienta nueva (D51), y el navegador ve
-`/afiches/12-3.webp` sobre el mismo origen, exactamente la misma URL que en producción.
+`/afiches/12-3.jpg` sobre el mismo origen, exactamente la misma URL que en producción.
 
 | | Quién escribe el archivo | Quién lo sirve | Qué ruta ve el navegador |
 |---|---|---|---|
-| **Desarrollo** | Spring, en `frontend/public/afiches/` (directorio configurable) | Next, como estático de `public/` | `http://localhost:3000/afiches/{id}-{version}.webp` |
-| **Producción** | Spring, en el volumen `uploads` montado con escritura | Caddy, con `file_server` sobre el mismo volumen montado **solo lectura** | `https://.../afiches/{id}-{version}.webp` |
+| **Desarrollo** | Spring, en `frontend/public/afiches/` (directorio configurable) | Next, como estático de `public/` | `http://localhost:3000/afiches/{id}-{version}.jpg` |
+| **Producción** | Spring, en el volumen `uploads` montado con escritura | Caddy, con `file_server` sobre el mismo volumen montado **solo lectura** | `https://.../afiches/{id}-{version}.jpg` |
 
 `frontend/public/afiches/` va al `.gitignore`: son datos de prueba, no fuente. Y como Next sirve
 `public/` desde el disco en cada pedido, un afiche recién subido aparece sin reiniciar nada.
@@ -454,7 +460,7 @@ Se descartaron, en orden de cuán cerca estuvieron:
   `dev` + el rewrite de Next). Es la más "simétrica" —un solo directorio, el mismo que el
   volumen— pero es código de backend que existe únicamente para desarrollo, contradice en el
   ambiente donde se prueba la decisión de que Spring no sirva archivos, y agrega un salto (Next →
-  Spring → disco) para leer un `.webp`. Más piezas para el mismo resultado visible.
+  Spring → disco) para leer un `.jpg`. Más piezas para el mismo resultado visible.
 - **Levantar Caddy también en desarrollo.** Da paridad perfecta y rompe D54, que dejó el Docker
   local en un comando (`docker compose up -d postgres`) por una razón de ritmo que sigue vigente.
 - **No tener afiches en desarrollo** (un placeholder fijo). Se descarta sola: la ficha con afiche

@@ -7,6 +7,9 @@ backend/target/
 # frontend (para cuando exista)
 frontend/node_modules/
 frontend/.next/
+# los afiches de desarrollo: los escribe Spring y los sirve Next (D78). Son datos de prueba,
+# no fuente — en producción esto es un volumen con su propio backup (D77)
+frontend/public/afiches/
 
 # IDEs y sistema
 .idea/

@@ -12,8 +12,8 @@ import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
-import org.springframework.web.ErrorResponse;
 import org.springframework.validation.FieldError;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -48,6 +48,10 @@ class ErroresDeApi extends ResponseEntityExceptionHandler {
 	 * Los mensajes que ve el usuario cuando el error lo detectó el framework y no el dominio. Van
 	 * en castellano y en voz del producto (D79/D84) porque el frontend los muestra tal cual: los
 	 * que trae Spring —"Invalid request content."— son correctos y están en otro idioma.
+	 *
+	 * <p>El {@code 413} del afiche que se pasa del tope (D77) entra por acá y no por un manejador
+	 * propio: la clase base ya declara {@code MaxUploadSizeExceededException}, así que agregarle
+	 * uno no compite con ella sino que la duplica, y Spring corta el arranque avisando.</p>
 	 */
 	private static final Map<HttpStatus, String> MENSAJES = Map.of(
 			HttpStatus.BAD_REQUEST, "Revisá los datos ingresados",
@@ -55,7 +59,8 @@ class ErroresDeApi extends ResponseEntityExceptionHandler {
 			HttpStatus.FORBIDDEN, "No tenés permiso para hacer eso",
 			HttpStatus.NOT_FOUND, "Eso no existe o ya no está",
 			HttpStatus.METHOD_NOT_ALLOWED, "Esa acción no se puede hacer así",
-			HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Ese tipo de contenido no se acepta");
+			HttpStatus.UNSUPPORTED_MEDIA_TYPE, "Ese tipo de contenido no se acepta",
+			HttpStatus.PAYLOAD_TOO_LARGE, "El archivo es demasiado grande: hasta 5 MB");
 
 	/** Lo único que se le puede decir a alguien sobre un error nuestro, sin mentirle. */
 	private static final String FALLA_INTERNA = "Algo falló de nuestro lado. Probá de nuevo en un rato";

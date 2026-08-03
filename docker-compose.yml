@@ -48,8 +48,12 @@ services:
       SPRING_DATASOURCE_USERNAME: ${DB_USER}
       SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD}
       SPRING_PROFILES_ACTIVE: prod
+      # dónde escribe los afiches (D77/D88): el volumen de abajo. En desarrollo, en cambio,
+      # escribe en frontend/public/afiches y los sirve Next (D78), que es el valor por defecto.
+      AFICHES_DIR: /app/uploads
     volumes:
-      # los afiches subidos persisten fuera del contenedor (D45)
+      # los afiches subidos persisten fuera del contenedor (D45). ⚠️ Falta la otra mitad, que es
+      # Fase 5: montarlo también en caddy —solo lectura— y que su Caddyfile sirva /afiches.
       - uploads:/app/uploads
     depends_on:
       postgres:
