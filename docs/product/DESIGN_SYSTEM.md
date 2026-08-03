@@ -638,12 +638,12 @@ frontend.
 | `promedio: null` | "Todavía nadie puntuó" en `tinta-tenue`, en el lugar del promedio. **Nunca "0"**, que es un puntaje válido y mentiría |
 | `loSigo: null` | **No se dibuja el botón de seguir.** Es el perfil propio o no hay sesión (D67) |
 | `leDiLike: null` | **No se dibuja el corazón.** El contador de likes sí se muestra si es > 0: leer cuántos hay no pide sesión |
-| `vecesQueLaVi: null` (⏳ D76) | No se dibuja nada de esa zona: no hay sesión |
+| `vecesQueLaVi: null` (D76) | No se dibuja nada de esa zona: no hay sesión |
 | `vecesQueLaVi: 0` | CTA primario **"Registrar que la vi"** |
 | `vecesQueLaVi: N ≥ 1` | "La viste **N** veces" (o "una vez") + botón secundario "Registrar de nuevo" — que es el re-visto de D19 y hay que ofrecerlo, no esconderlo |
 | `granularidad: "SIN_FECHA"` | "sin fecha" en `Chip` variante `nota`. En el diario van en **su propia sección al final** (MD-2), con encabezado propio: no se mezclan ni se les inventa fecha |
 | `sala`, `complejo`, `sinopsis`, `obraOriginal`, `autorOriginal` nulos | **La línea entera desaparece**, etiqueta incluida. No hay "Sala: —". La ficha se acorta |
-| `aficheUrl: null` (⏳ D77) | Placa tipográfica o cambio de forma, según la pantalla (ver arriba). **Es el caso normal, no un error** |
+| `aficheUrl: null` (D77) | Placa tipográfica o cambio de forma, según la pantalla (ver arriba). **Es el caso normal, no un error** |
 | Feed `global: true` | `Aviso` variante `info` arriba del feed: "Estás viendo toda la plataforma. Seguí gente para armar tu feed" (D22) |
 | Feed `items: []` con `global: true` | `EstadoVacio` informativo: no hay actividad todavía en ningún lado |
 | Feed `items: []` con `global: false` | `EstadoVacio` informativo **distinto**: los que seguís no registraron nada. Es información honesta, no un feed roto (D66) |
@@ -660,8 +660,8 @@ pasó a ser la especificación de lo que el backend hace hoy: encaja el afiche e
 1200×1600 **sin recortar**, no lo agranda nunca, y guarda un JPEG.
 
 **Este era el insumo de P16** y por eso fue entregable obligatorio: P16 no podía decidir a qué
-tamaño se guarda una imagen si no está escrito a qué tamaño se muestra. **Acá van los tamaños y
-nada más: P16 sigue abierto.**
+tamaño se guarda una imagen si no está escrito a qué tamaño se muestra. **Acá van los tamaños**;
+lo demás lo decidió D88 con esta tabla en la mano.
 
 | Uso | Caja en CSS px | Proporción | Ajuste | Necesita (×2) |
 |---|---|---|---|---|
@@ -679,12 +679,12 @@ nada más: P16 sigue abierto.**
    afiche. La ficha es la pantalla que puede permitirse alto variable, así que ahí se ve entero.
 2. **La grilla sí recorta, y lo hace la pantalla, no la subida.** Una grilla necesita celdas
    parejas o no es una grilla. Se recorta con CSS **anclado arriba** (`object-position: top`),
-   que es donde los afiches ponen el título. ⚠️ **Consecuencia directa para P16: el archivo se
-   guarda sin recortar.** Guardar ya recortado a 2:3 destruiría la ficha para ganar algo que el
-   navegador hace gratis.
+   que es donde los afiches ponen el título. ⚠️ **Consecuencia directa, y así quedó implementado
+   (D88): el archivo se guarda sin recortar.** Guardar ya recortado a 2:3 destruiría la ficha para
+   ganar algo que el navegador hace gratis.
 
-**Lo que esto le entrega a P16** (y que P16 sigue teniendo que decidir, junto con la herramienta,
-el formato, la calidad, la orientación EXIF y el tope de píxeles decodificados):
+**Lo que esto le entregó a P16** —que con esta tabla ya pudo cerrarse en D88, con su herramienta,
+su formato, su calidad, su orientación EXIF y su tope de píxeles decodificados—:
 
 - **El lado mayor que se llega a mostrar es 1200 px** (el `og:image`). El segundo es 960
   (ficha ≥`md` en pantalla ×2).
@@ -734,5 +734,7 @@ Sin i18n: **castellano rioplatense, voseo, una sola persona escribiendo** (`FRON
 - **El código de los componentes**: se escribe con el esqueleto de `/frontend` (paso 1).
 - **Cualquier herramienta nueva**: no hay ninguna. Ni librería de UI (D73), ni de íconos, ni de
   animación, ni webfonts, ni generador de tokens.
-- **Cómo se procesa el afiche al subirlo**: **P16**, que este documento desbloquea con los tamaños
-  de arriba pero no cierra.
+- ~~**Cómo se procesa el afiche al subirlo**~~: era **P16**, que este documento desbloqueó con los
+  tamaños de arriba; lo cerró **D88** y lo amplió **D89** (la orientación EXIF en los tres
+  formatos). Sigue valiendo lo que este documento fija: la caja de 1200×1600 y el recorte que hace
+  CSS y no la subida.

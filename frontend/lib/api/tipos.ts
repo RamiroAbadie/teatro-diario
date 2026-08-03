@@ -109,9 +109,10 @@ export type Opiniones = {
 };
 
 /**
- * Las tres familias de error de API.md, aplanadas en un solo tipo (D78).
- * Ninguna pantalla ve la diferencia entre un `ProblemDetail` con `detail`, uno con el
- * mapa `errores` y lo que arme el framework.
+ * El error de API.md, aplanado en un solo tipo (D78). Desde D87 el backend ya manda una sola
+ * forma; este tipo sigue siendo el que ninguna pantalla mira de cerca: `mensaje` sale del
+ * `detail` cuando vino y de la tabla por código cuando no, y `errores` está sólo cuando el
+ * problema es de campos.
  */
 export type ErrorDeApi = {
   status: number;

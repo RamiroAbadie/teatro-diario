@@ -144,8 +144,10 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    necesita una URL pública, o sea la Fase 5. Lo que sí está verificado es lo que lo sostiene:
    los `<meta>` con URL absoluta y la placa de 1200×630 generada y mirada en los dos casos
    (título corto y título de 79 caracteres). **Y sigue pendiente la verificación de D81**: la
-   ficha con el afiche a 60 vh contra el cromo del armazón — no se puede medir hasta que haya
-   un afiche (P16), y hoy la ficha sin afiche cambia de forma y entra sobrada.
+   ficha con el afiche a 60 vh contra el cromo del armazón. **Ya no la bloquea P16**, que cerró
+   en D88: el endpoint existe y se puede subir un afiche de prueba. Lo que falta para medirla es
+   la pantalla que lo suba (paso 6) o una subida a mano por `curl`; hoy la ficha sin afiche cambia
+   de forma y entra sobrada.
 3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas
    que no cierran. Va en dos entregas y la primera está hecha:
    ~~el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice` que unifique las
@@ -166,10 +168,14 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    (reservar → escribir → publicar → borrar el viejo) con **la reserva en una sola sentencia
    atómica**, **la publicación con la fila bloqueada** y **el borrado del archivo después del
    commit y fuera de la transacción**, y el `DELETE` idempotente. Los tests que el contrato
-   exigía son **12**, y los tres que importan más que el camino feliz son el del contador que no
-   se reinicia y los **dos solapamientos forzados**, que son deterministas porque llaman a las
-   piezas de a una: por HTTP la ventana dura lo que tarda un `update` y el test pasaría por
-   suerte. **91 tests en verde.**
+   exigía son **15**, y los tres que importan más que el camino feliz son el del contador que no
+   se reinicia y los **dos solapamientos con dos transacciones de verdad** —una tiene la fila
+   tomada medio segundo y la otra tiene que esperarla—, que **fallan si se le saca el bloqueo al
+   repositorio**: comprobado sacándolo. Los otros dos, que corren los pasos intercalados en un
+   solo hilo, prueban el orden y no el bloqueo, y así están nombrados. **94 tests en verde.**
+   ⚠️ **Esos dos tests de bloqueo entraron después, en D89**, junto con la orientación EXIF en los
+   tres formatos y el movimiento atómico que dejó de degradar en silencio: los encontró una
+   auditoría del paso, y los tres eran defectos reales.
    ✅ **P16 quedó cerrada en D88**: **TwelveMonkeys** para leer (Java puro, sin binarios nativos;
    acepta los tres formatos que promete `API.md` y no se planta con los JPEG CMYK de imprenta) y
    **JPEG a la salida**, porque no existe un escritor de WebP en Java puro. Eso **cambia la URL

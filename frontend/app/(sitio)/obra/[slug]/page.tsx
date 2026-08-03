@@ -72,7 +72,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       ? recortar(ficha.sinopsis)
       : [`Teatro en Buenos Aires`, sala].filter(Boolean).join(" · "),
     ruta: rutaObra(ficha.id, ficha.titulo),
-    // El afiche tal cual cuando exista (D77, ⏳); si no, la placa tipográfica (D71/D79).
+    // El afiche tal cual cuando lo hay (D77/D88); si no, la placa tipográfica (D71/D79).
     imagen: ficha.aficheUrl ?? rutaDeLaPlaca("obra", ficha.id),
   });
 }
@@ -149,9 +149,9 @@ export default async function FichaPage({ params }: Props) {
                 cantidadRatings={opiniones.cantidadRatings}
               />
             ) : null}
-            {/* ⏳ **El CTA del gesto no se dibuja todavía**, y no es un olvido: necesita
-                `vecesQueLaVi` (D76, que el backend no manda) y la hoja del gesto (paso 4).
-                Con `null` la regla ya está escrita: no hay sesión, no hay zona. */}
+            {/* **El CTA del gesto no se dibuja todavía**, y no es un olvido: `vecesQueLaVi`
+                (D76) ya lo manda el backend, pero falta la hoja del gesto (paso 4). Con `null`
+                la regla ya está escrita: no hay sesión, no hay zona. */}
           </div>
 
           {ficha.sinopsis && (

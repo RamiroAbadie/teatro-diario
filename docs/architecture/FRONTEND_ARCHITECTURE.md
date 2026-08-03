@@ -286,7 +286,7 @@ Cómo está armado (D85), que son tres piezas y ninguna es opcional:
 | Pieza | Qué hace | Qué pasa si falta |
 |---|---|---|
 | `lib/metadatos.ts` | los seis campos, una sola vez, para las cuatro pantallas | se desincronizan y no se nota: el preview roto se ve recién al pegar el link |
-| `app/og/{tipo}/{id}` | dibuja la placa 1200×630 con `next/og`, **siempre oscura** | sin afiches (P16) el catálogo entero queda sin imagen |
+| `app/og/{tipo}/{id}` | dibuja la placa 1200×630 con `next/og`, **siempre oscura** | una ficha sin afiche —el caso normal, D71— queda sin imagen al compartirse |
 | `metadataBase` (`SITIO_URL`) | hace **absolutos** el `og:image` y el `canonical` | Next los emite relativos y **WhatsApp no los resuelve**: preview sin imagen |
 
 ⚠️ **La placa es una ruta y no el `opengraph-image.tsx` convencional de Next**, y el motivo es
