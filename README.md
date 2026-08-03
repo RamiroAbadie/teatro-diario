@@ -87,9 +87,10 @@ Sin monetización, sin telemetría, sin dark patterns. Presupuesto de infraestru
 se está escribiendo ahora son las pantallas. **Ya están las públicas**: en cartel, la ficha de
 una obra, la página de artista, la de sala y la home del visitante — con SSR y con el preview
 que se ve al compartir el link. Lo que todavía no podés hacer es tener cuenta y usarla desde
-el navegador: entrar, registrar lo que viste y ver tu diario son los pasos que siguen. Al backend le quedan **tres cosas de esta
-misma fase**: la subida de afiches (D77, bloqueada por P16), el `vecesQueLaVi` de la ficha
-(D76) y un `@ControllerAdvice` que unifique las respuestas de error.
+el navegador: entrar, registrar lo que viste y ver tu diario son los pasos que siguen. **Al
+backend ya no le queda nada de esta fase**: las tres cosas que faltaban —la subida de afiches
+(D77/D88), el `vecesQueLaVi` de la ficha (D76) y un manejo global de errores (D87)— están
+hechas y probadas.
 
 Lo que funciona hoy:
 
@@ -121,7 +122,6 @@ Lo que todavía no existe, a propósito y en este orden:
 | | Cuándo |
 |---|---|
 | **Las pantallas que piden cuenta**: alta y login, el gesto de registro, el diario, el feed, la búsqueda y el panel | Fase 4 (lo que queda) |
-| Subida de afiches | Fase 4, cuando cierre P16 |
 | Migraciones con Flyway, deploy al VPS, backups | Fase 5 |
 
 La regla del roadmap es que las herramientas entran **cuando aparece su problema**, no por

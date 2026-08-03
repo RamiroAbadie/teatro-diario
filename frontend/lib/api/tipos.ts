@@ -33,16 +33,15 @@ export type Persona = { id: number; nombre: string };
  * **Resumen de producción**: la forma corta que devuelven en-cartel, artista, sala,
  * búsqueda y el listado del admin.
  *
- * ⚠️ `aficheUrl` va **opcional** y no `string | null` a propósito: el contrato lo promete
- * (D77) pero **el backend todavía no lo manda** —es uno de los dos ⏳ de `API.md`—, así que
- * hoy llega `undefined` y no `null`. Escribirlo obligatorio sería un tipo que miente sobre
- * lo que hay del otro lado; el día que exista, el campo ya está y nada cambia.
+ * `aficheUrl` **llega siempre**: el backend lo manda desde que existe la subida de afiches
+ * (D77/D88). Es `null` cuando la ficha no tiene afiche, que es el caso normal y no un error
+ * (D71), y termina en `.jpg` — no en `.webp`, porque no hay escritor de WebP en Java puro.
  */
 export type ProduccionResumen = {
   id: number;
   titulo: string;
   estado: EstadoProduccion;
-  aficheUrl?: string | null;
+  aficheUrl: string | null;
   sala: Sala | null;
 };
 
@@ -56,7 +55,7 @@ export type Ficha = {
   obraOriginal: string | null;
   autorOriginal: string | null;
   estado: EstadoProduccion;
-  aficheUrl?: string | null;
+  aficheUrl: string | null;
   sala: Sala | null;
   participaciones: Participacion[];
 };
@@ -94,16 +93,18 @@ export type ReseniaDeFicha = {
 
 /**
  * `GET /api/producciones/{id}/opiniones`. **Abierto pero personalizado**: con cookie agrega
- * `leDiLike` en cada reseña y `vecesQueLaVi` ⏳ — por eso lo pide `apiPublic` o `apiSession`
+ * `leDiLike` en cada reseña y `vecesQueLaVi` — por eso lo pide `apiPublic` o `apiSession`
  * según la llamada, y nunca se cachea una respuesta pedida con cookie (D78).
  *
  * ⚠️ `promedio` es el **último rating de cada usuario** (D20), no un `AVG`, y `null` cuando
- * nadie puntuó. `vecesQueLaVi` es opcional por lo mismo que `aficheUrl`: es el otro ⏳ (D76).
+ * nadie puntuó. `vecesQueLaVi` (D76) sigue la convención de tres estados: `null` sin sesión,
+ * `0` con sesión y sin haberla visto —lo que habilita el CTA de registrar— y `N` con el
+ * re-visto de D19.
  */
 export type Opiniones = {
   promedio: number | null;
   cantidadRatings: number;
-  vecesQueLaVi?: number | null;
+  vecesQueLaVi: number | null;
   resenias: ReseniaDeFicha[];
 };
 

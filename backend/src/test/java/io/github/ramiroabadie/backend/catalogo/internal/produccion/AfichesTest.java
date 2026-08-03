@@ -5,9 +5,11 @@ import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Duration;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -36,6 +38,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 import org.springframework.test.web.servlet.request.MockMultipartHttpServletRequestBuilder;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -70,6 +73,9 @@ class AfichesTest {
 
 	private static final Path DEPOSITO = Path.of("target", "afiches-de-prueba");
 
+	/** Cuánto se queda abierta la transacción que gana, para que la otra tenga con qué chocar. */
+	private static final Duration SOLAPE = Duration.ofMillis(500);
+
 	@Autowired
 	private MockMvc mockMvc;
 
@@ -85,6 +91,13 @@ class AfichesTest {
 
 	@Autowired
 	private ProcesadorDeAfiche procesador;
+
+	/** Los dos que hacen falta para forzar un solapamiento real: la fila y la transacción. */
+	@Autowired
+	private ProduccionRepository repositorio;
+
+	@Autowired
+	private TransactionTemplate transacciones;
 
 	@BeforeAll
 	static void vaciarElDeposito() throws IOException {
@@ -212,19 +225,53 @@ class AfichesTest {
 	}
 
 	/**
-	 * La foto de celular que llega acostada. El EXIF dice "girada 90° a la derecha" y el archivo
-	 * guardado tiene que salir derecho —y con los lados intercambiados—, porque el JPEG que se
-	 * guarda no lleva EXIF: si no se aplica acá, no lo aplica nadie después.
+	 * ⚠️ <b>La orientación EXIF se lee en los tres formatos y no sólo en JPEG</b>, porque los tres
+	 * pueden traerla: el PNG en su bloque {@code eXIf} y el WebP en el suyo. Ninguno de los tres
+	 * lectores la aplica solo, así que si no se aplicara acá, el afiche quedaría acostado en la
+	 * ficha. Los tres casos, con los lados intercambiados como prueba.
 	 */
 	@Test
-	void laOrientacionExifSeAplicaAlGuardar() throws Exception {
-		Long obra = crearProduccion("La obra de la foto acostada");
+	void laOrientacionExifSeAplicaEnLosTresFormatos() throws Exception {
+		Long conJpeg = crearProduccion("La foto acostada en JPEG");
+		Long conPng = crearProduccion("La foto acostada en PNG");
+		Long conWebp = crearProduccion("La foto acostada en WebP");
 
-		subir(obra, jpegConOrientacion(40, 20, 6), "acostada.jpg").andExpect(status().isOk());
+		subir(conJpeg, jpegConOrientacion(40, 20, 6), "acostada.jpg").andExpect(status().isOk());
+		subir(conPng, pngConOrientacion(40, 20, 6), "acostada.png").andExpect(status().isOk());
+		subir(conWebp, recurso("afiche-orientado.webp"), "acostada.webp").andExpect(status().isOk());
 
-		BufferedImage guardado = leer(archivo(obra, 1));
-		assertThat(guardado.getWidth()).isEqualTo(20);
-		assertThat(guardado.getHeight()).isEqualTo(40);
+		for (Long obra : List.of(conJpeg, conPng, conWebp)) {
+			BufferedImage guardado = leer(archivo(obra, 1));
+			assertThat(guardado.getWidth()).as("ancho de la ficha %d", obra).isEqualTo(20);
+			assertThat(guardado.getHeight()).as("alto de la ficha %d", obra).isEqualTo(40);
+		}
+	}
+
+	/**
+	 * Las dos entradas que justifican la dependencia de D88, con archivos de verdad y no con
+	 * confianza en el {@code pom.xml}: un <b>WebP</b>, que el JDK directamente no sabe leer —y hoy
+	 * cualquier imagen bajada de una web moderna llega así—, y un <b>JPEG CMYK</b>, que es lo que
+	 * sale de imprenta y con lo que el lector del JDK se planta. Los dos salen del otro lado como
+	 * un JPEG RGB.
+	 */
+	@Test
+	void elWebpYElJpegDeImprentaEntranComoCualquierAfiche() throws Exception {
+		Long conWebp = crearProduccion("La obra del afiche en WebP");
+		Long conCmyk = crearProduccion("La obra del afiche de imprenta");
+
+		subir(conWebp, recurso("afiche.webp"), "afiche.webp")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aficheUrl").value("/afiches/" + conWebp + "-1.jpg"));
+		subir(conCmyk, recurso("afiche-cmyk.jpg"), "afiche.jpg")
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.aficheUrl").value("/afiches/" + conCmyk + "-1.jpg"));
+
+		for (Long obra : List.of(conWebp, conCmyk)) {
+			assertThat(formatoDe(archivo(obra, 1))).isEqualTo("JPEG");
+			BufferedImage guardado = leer(archivo(obra, 1));
+			assertThat(guardado.getWidth()).isEqualTo(400);
+			assertThat(guardado.getHeight()).isEqualTo(600);
+		}
 	}
 
 	/** El afiche es parte del catálogo: lo toca el admin y nadie más (D7). */
@@ -245,18 +292,18 @@ class AfichesTest {
 	}
 
 	/**
-	 * Dos publicaciones solapadas, con el entrelazado forzado: las dos reservan, las dos
-	 * escriben, y publican **al revés** del orden en que reservaron. Lo que se vigila es la regla
-	 * que ordena todo el contrato — <b>la base nunca apunta a un archivo que no está</b>—, y lo
-	 * que la sostiene es que publicar devuelva la versión anterior <i>capturada bajo el bloqueo</i>
-	 * en vez de releer la base: releyendo, la segunda borraría el archivo que la primera acaba de
-	 * publicar y la ficha quedaría apuntando a un archivo borrado.
+	 * Dos subidas intercaladas: las dos reservan, las dos escriben, y publican **al revés** del
+	 * orden en que reservaron. Lo que prueba es que el resultado no dependa del orden de reserva
+	 * —gana la última en publicar y la otra se va con su archivo—, que es la regla que ordena
+	 * todo el contrato: <b>la base nunca apunta a un archivo que no está</b>.
 	 *
-	 * <p>Dos subidas <i>seguidas</i> —que es lo que prueba {@link #reemplazarEstrenaUrlYSeLlevaElArchivoViejo()}—
-	 * no prueban nada de esto: el problema es el solapamiento.</p>
+	 * <p>⚠️ <b>Lo que este test NO prueba, y conviene tenerlo escrito porque es fácil creer que
+	 * sí:</b> el bloqueo de la fila. Acá los pasos corren uno después del otro en el mismo hilo,
+	 * así que sacarle el {@code @Lock} al repositorio lo dejaría igual de verde — comprobado.
+	 * Eso lo prueban los dos de más abajo, que sí solapan dos transacciones.</p>
 	 */
 	@Test
-	void dosPublicacionesSolapadasDejanLaFichaApuntandoAUnArchivoQueExiste() throws Exception {
+	void dosPublicacionesIntercaladasDejanLaFichaApuntandoAUnArchivoQueExiste() throws Exception {
 		Long obra = crearProduccion("La obra de las dos subidas a la vez");
 		byte[] jpeg = procesador.aJpeg(png(600, 800));
 
@@ -276,13 +323,13 @@ class AfichesTest {
 	}
 
 	/**
-	 * El otro solapamiento que pide D77: una subida en curso y un borrado en el medio. El borrado
-	 * gana el estado —la ficha se queda sin afiche— y la subida que venía atrás publica después
-	 * sin llevarse puesto nada: la anterior que captura es {@code null}, así que no hay archivo
-	 * viejo que borrar, y el que quedó es el que la ficha apunta.
+	 * Una subida en curso con un borrado en el medio, también intercalado en un solo hilo: el
+	 * borrado gana el estado —la ficha se queda sin afiche— y la subida que venía atrás publica
+	 * después sin llevarse puesto nada. Misma advertencia que el anterior: prueba el orden, no el
+	 * bloqueo.
 	 */
 	@Test
-	void unaSubidaSolapadaConUnBorradoNoDejaLaFichaRota() throws Exception {
+	void unaSubidaIntercaladaConUnBorradoNoDejaLaFichaRota() throws Exception {
 		Long obra = crearProduccion("La obra del borrado en el medio");
 		subir(obra, png(600, 800), "primero.png").andExpect(status().isOk());
 		byte[] jpeg = procesador.aJpeg(png(600, 800));
@@ -328,6 +375,99 @@ class AfichesTest {
 		String url = JsonPath.read(ficha.getResponse().getContentAsString(), "$.aficheUrl");
 		assertThat(url).isIn("/afiches/" + obra + "-1.jpg", "/afiches/" + obra + "-2.jpg");
 		assertThat(archivos(obra)).containsExactly(DEPOSITO.resolve(url.substring("/afiches/".length())));
+	}
+
+	/**
+	 * ⚠️ <b>El test que le da sentido al {@code select ... for update} de D77</b>, y el que faltaba:
+	 * dos publicaciones que <b>se solapan de verdad</b>, con el entrelazado forzado y no librado
+	 * al planificador. Un hilo toma la fila y se queda adentro de la transacción medio segundo;
+	 * el otro intenta publicar en el medio.
+	 *
+	 * <p>Lo que se afirma es lo único que distingue haber bloqueado de no haberlo hecho: <b>el
+	 * segundo tiene que esperar y ver publicada la versión del primero</b>. Sin el bloqueo, su
+	 * lectura pasa de largo, devuelve "no había ninguna" y el archivo del primero queda huérfano
+	 * mientras la ficha apunta a otro lado. <b>Comprobado en los dos sentidos</b>: sacándole el
+	 * {@code @Lock} al repositorio, este test falla.</p>
+	 */
+	@Test
+	void publicarConLaFilaTomadaEsperaYVeLoQueElOtroPublico() throws Exception {
+		Long obra = crearProduccion("La obra de las dos transacciones");
+		byte[] jpeg = procesador.aJpeg(png(600, 800));
+		int primera = versiones.reservar(obra);
+		int segunda = versiones.reservar(obra);
+		almacen.escribir(obra, primera, jpeg);
+		almacen.escribir(obra, segunda, jpeg);
+
+		CountDownLatch filaTomada = new CountDownLatch(1);
+		ExecutorService hilos = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> laQueBloquea = hilos.submit(() -> transacciones.executeWithoutResult(estado -> {
+				repositorio.bloquearPorId(obra).orElseThrow().publicarAfiche(primera);
+				filaTomada.countDown();
+				dormir(SOLAPE);
+			}));
+			Future<Integer> laQueEspera = hilos.submit(() -> {
+				filaTomada.await();
+				return versiones.publicar(obra, segunda);
+			});
+
+			laQueBloquea.get();
+			assertThat(laQueEspera.get())
+					.as("la segunda publicación tiene que ver la versión que la primera publicó")
+					.isEqualTo(primera);
+		}
+		finally {
+			hilos.shutdownNow();
+		}
+	}
+
+	/**
+	 * El otro solapamiento que D77 pide con sincronización explícita: una subida y un borrado
+	 * peleando por la misma fila. El borrado entra primero y se queda adentro de la transacción;
+	 * la subida que venía atrás tiene que esperarlo y encontrarse con que ya no hay afiche
+	 * publicado — <b>{@code null} y no la versión vieja</b>, que es lo que devolvería sin el
+	 * bloqueo y la llevaría a borrar un archivo que ya no le corresponde. Comprobado también en
+	 * los dos sentidos.
+	 */
+	@Test
+	void publicarMientrasOtroBorraEsperaYSeEncuentraSinAfiche() throws Exception {
+		Long obra = crearProduccion("La obra del borrado y la subida a la vez");
+		subir(obra, png(600, 800), "primero.png").andExpect(status().isOk());
+		byte[] jpeg = procesador.aJpeg(png(600, 800));
+		int enCurso = versiones.reservar(obra);
+		almacen.escribir(obra, enCurso, jpeg);
+
+		CountDownLatch filaTomada = new CountDownLatch(1);
+		ExecutorService hilos = Executors.newFixedThreadPool(2);
+		try {
+			Future<?> elBorrado = hilos.submit(() -> transacciones.executeWithoutResult(estado -> {
+				repositorio.bloquearPorId(obra).orElseThrow().despublicarAfiche();
+				filaTomada.countDown();
+				dormir(SOLAPE);
+			}));
+			Future<Integer> laSubida = hilos.submit(() -> {
+				filaTomada.await();
+				return versiones.publicar(obra, enCurso);
+			});
+
+			elBorrado.get();
+			assertThat(laSubida.get())
+					.as("la subida que esperó tiene que ver que el borrado dejó la ficha sin afiche")
+					.isNull();
+		}
+		finally {
+			hilos.shutdownNow();
+		}
+	}
+
+	private static void dormir(Duration cuanto) {
+		try {
+			Thread.sleep(cuanto.toMillis());
+		}
+		catch (InterruptedException ex) {
+			Thread.currentThread().interrupt();
+			throw new IllegalStateException(ex);
+		}
 	}
 
 	private Object subirEnParalelo(CountDownLatch largada, Long obra, byte[] imagen) {
@@ -424,13 +564,7 @@ class AfichesTest {
 	 */
 	private static byte[] jpegConOrientacion(int ancho, int alto, int orientacion) throws IOException {
 		byte[] original = jpeg(ancho, alto);
-		byte[] tiff = {
-				'M', 'M', 0, 42, 0, 0, 0, 8,          // big endian, 42, IFD0 en el byte 8
-				0, 1,                                  // una sola entrada
-				1, 18, 0, 3, 0, 0, 0, 1,               // tag 0x0112 (orientación), tipo SHORT, cantidad 1
-				0, (byte) orientacion, 0, 0,           // el valor, alineado a la izquierda
-				0, 0, 0, 0                             // no hay IFD siguiente
-		};
+		byte[] tiff = tiffConOrientacion(orientacion);
 		byte[] identificador = { 'E', 'x', 'i', 'f', 0, 0 };
 		int largo = 2 + identificador.length + tiff.length;
 		ByteArrayOutputStream salida = new ByteArrayOutputStream();
@@ -443,6 +577,52 @@ class AfichesTest {
 		salida.write(tiff);
 		salida.write(original, 2, original.length - 2);
 		return salida.toByteArray();
+	}
+
+	/** Los tres archivos que no se pueden fabricar desde Java: ver el README de esa carpeta. */
+	private static byte[] recurso(String nombre) throws IOException {
+		try (InputStream entrada = AfichesTest.class.getResourceAsStream("/afiches/" + nombre)) {
+			if (entrada == null) {
+				throw new IllegalStateException("Falta el archivo de prueba /afiches/" + nombre);
+			}
+			return entrada.readAllBytes();
+		}
+	}
+
+	/**
+	 * Un PNG con un bloque {@code eXIf} metido a mano enseguida de la cabecera, que es donde la
+	 * especificación lo pide. Mismo TIFF que el del JPEG, pero sin el prefijo {@code Exif\0\0}:
+	 * el PNG guarda el bloque pelado, y esa diferencia entre contenedores es justamente lo que el
+	 * código tiene que tolerar.
+	 */
+	private static byte[] pngConOrientacion(int ancho, int alto, int orientacion) throws IOException {
+		byte[] original = png(ancho, alto);
+		byte[] tiff = tiffConOrientacion(orientacion);
+		ByteArrayOutputStream nombreYDatos = new ByteArrayOutputStream();
+		nombreYDatos.write(new byte[] { 'e', 'X', 'I', 'f' });
+		nombreYDatos.write(tiff);
+		CRC32 control = new CRC32();
+		control.update(nombreYDatos.toByteArray());
+
+		int finDeLaCabecera = 8 + 25; // firma + el bloque IHDR entero
+		ByteArrayOutputStream salida = new ByteArrayOutputStream();
+		salida.write(original, 0, finDeLaCabecera);
+		salida.write(enteroDe(tiff.length));
+		salida.write(nombreYDatos.toByteArray());
+		salida.write(enteroDe((int) control.getValue()));
+		salida.write(original, finDeLaCabecera, original.length - finDeLaCabecera);
+		return salida.toByteArray();
+	}
+
+	/** Un TIFF mínimo con una sola entrada: la orientación. */
+	private static byte[] tiffConOrientacion(int orientacion) {
+		return new byte[] {
+				'M', 'M', 0, 42, 0, 0, 0, 8,          // big endian, 42, IFD0 en el byte 8
+				0, 1,                                  // una sola entrada
+				1, 18, 0, 3, 0, 0, 0, 1,               // tag 0x0112 (orientación), tipo SHORT, cantidad 1
+				0, (byte) orientacion, 0, 0,           // el valor, alineado a la izquierda
+				0, 0, 0, 0                             // no hay IFD siguiente
+		};
 	}
 
 	/**

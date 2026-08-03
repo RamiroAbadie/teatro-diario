@@ -77,17 +77,24 @@ class AlmacenDeAfiches {
 	}
 
 	/**
-	 * El movimiento atómico solo está garantizado dentro del mismo sistema de archivos —y el
-	 * temporal se crea en el mismo directorio justamente para eso—. Si aun así no lo soporta, se
-	 * cae al reemplazo común: peor garantía, pero mejor que no poder subir un afiche.
+	 * El movimiento atómico está garantizado dentro del mismo sistema de archivos, y el temporal
+	 * se crea en el mismo directorio justamente para eso.
+	 *
+	 * <p>⚠️ <b>Si el sistema de archivos no lo soporta, esto falla y no cae a un movimiento
+	 * común.</b> Es a propósito: D77 promete que nadie puede leer un afiche a medio escribir, y
+	 * un reemplazo no atómico es exactamente la ventana que esa promesa dice que no existe.
+	 * Degradar en silencio dejaría la garantía escrita en el contrato y rota en producción, sin
+	 * nada que lo delate. Lo que queda cuando falla es lo mismo que cuando falla cualquier otro
+	 * paso: un temporal huérfano, la versión sin publicar y la ficha mostrando lo que mostraba.
+	 * El día que un entorno real no lo soporte, se enmienda el contrato — no el silencio.</p>
 	 */
 	private static void mover(Path desde, Path hasta) throws IOException {
 		try {
 			Files.move(desde, hasta, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
 		}
 		catch (AtomicMoveNotSupportedException ex) {
-			log.warn("El sistema de archivos de {} no soporta movimientos atómicos", hasta.getParent());
-			Files.move(desde, hasta, StandardCopyOption.REPLACE_EXISTING);
+			throw new IOException("El sistema de archivos de " + hasta.getParent()
+					+ " no soporta movimientos atómicos, que es lo que el contrato de afiches necesita", ex);
 		}
 	}
 }

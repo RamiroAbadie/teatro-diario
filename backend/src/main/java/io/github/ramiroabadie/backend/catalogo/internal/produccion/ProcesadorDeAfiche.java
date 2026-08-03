@@ -9,6 +9,8 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -130,25 +132,26 @@ class ProcesadorDeAfiche {
 	}
 
 	/**
-	 * La orientación que declara el EXIF, o 1 —"derecha"— si no la declara. Solo la traen los
-	 * JPEG; un PNG o un WebP no tienen dónde ponerla.
+	 * La orientación que declara el EXIF, o 1 —"derecha"— si no la declara.
+	 *
+	 * <p><b>Los tres formatos que se aceptan pueden traerla</b>, y por eso se lee en los tres: el
+	 * JPEG en un segmento {@code APP1}, el PNG en un bloque {@code eXIf} —que es parte de la
+	 * especificación desde 2017— y el WebP en un bloque {@code EXIF} de su contenedor RIFF.
+	 * Ninguno de los tres lectores la aplica solo. Creer que sólo el JPEG la trae es la clase de
+	 * error que se ve recién cuando un afiche aparece acostado en la ficha.</p>
 	 *
 	 * <p>Cualquier problema leyéndola devuelve 1 y sigue: un EXIF raro no puede ser el motivo de
 	 * que un afiche no se pueda subir. Lo peor que pasa es que esa foto quede acostada, que es
 	 * exactamente lo que pasaba antes de leerla.</p>
 	 */
 	private static int orientacionExif(byte[] original, String formato) {
-		if (!formato.toLowerCase(Locale.ROOT).startsWith("jp")) {
-			return 1;
-		}
-		try (ImageInputStream entrada = new MemoryCacheImageInputStream(new ByteArrayInputStream(original))) {
-			List<JPEGSegment> segmentos = JPEGSegmentUtil.readSegments(entrada, JPEG.APP1, "Exif");
-			if (segmentos.isEmpty()) {
+		try {
+			byte[] tiff = bloqueExif(original, formato.toLowerCase(Locale.ROOT));
+			if (tiff == null) {
 				return 1;
 			}
-			InputStream datos = segmentos.get(0).data();
-			datos.skip(1); // el byte de relleno que sigue al identificador "Exif\0"
-			Directory exif = new TIFFReader().read(new MemoryCacheImageInputStream(datos));
+			Directory exif = new TIFFReader()
+					.read(new MemoryCacheImageInputStream(new ByteArrayInputStream(tiff)));
 			Entry orientacion = exif == null ? null : exif.getEntryById(TIFF.TAG_ORIENTATION);
 			return orientacion == null ? 1 : ((Number) orientacion.getValue()).intValue();
 		}
@@ -156,6 +159,91 @@ class ProcesadorDeAfiche {
 			log.debug("No se pudo leer la orientación EXIF del afiche; se asume derecha", ex);
 			return 1;
 		}
+	}
+
+	/** El bloque TIFF crudo, esté donde esté según el formato, o {@code null} si no hay ninguno. */
+	private static byte[] bloqueExif(byte[] original, String formato) throws IOException {
+		if (formato.startsWith("jp")) {
+			return exifDeJpeg(original);
+		}
+		if (formato.equals("png")) {
+			return exifDeChunks(original, 8, "eXIf", true);
+		}
+		if (formato.equals("webp")) {
+			return exifDeChunks(original, 12, "EXIF", false);
+		}
+		return null;
+	}
+
+	private static byte[] exifDeJpeg(byte[] original) throws IOException {
+		try (ImageInputStream entrada = new MemoryCacheImageInputStream(new ByteArrayInputStream(original))) {
+			List<JPEGSegment> segmentos = JPEGSegmentUtil.readSegments(entrada, JPEG.APP1, "Exif");
+			if (segmentos.isEmpty()) {
+				return null;
+			}
+			InputStream datos = segmentos.get(0).data();
+			datos.skip(1); // el byte de relleno que sigue al identificador "Exif\0"
+			return datos.readAllBytes();
+		}
+	}
+
+	/**
+	 * PNG y WebP guardan el EXIF en un bloque de su contenedor, y los dos contenedores son la
+	 * misma idea con dos detalles distintos: el PNG escribe el largo en big endian y pone el
+	 * nombre antes, el WebP lo escribe en little endian y rellena a par. Se recorren igual.
+	 *
+	 * @param desde dónde empieza la lista de bloques: 8 en el PNG (la firma), 12 en el WebP
+	 * (RIFF + tamaño + WEBP)
+	 * @param nombre el bloque que se busca
+	 * @param bigEndian cómo viene escrito el largo de cada bloque
+	 */
+	private static byte[] exifDeChunks(byte[] original, int desde, String nombre, boolean bigEndian) {
+		int posicion = desde;
+		while (posicion + 8 <= original.length) {
+			String tipo;
+			long largo;
+			if (bigEndian) {
+				largo = entero(original, posicion, true);
+				tipo = new String(original, posicion + 4, 4, StandardCharsets.US_ASCII);
+				posicion += 8;
+			}
+			else {
+				tipo = new String(original, posicion, 4, StandardCharsets.US_ASCII);
+				largo = entero(original, posicion + 4, false);
+				posicion += 8;
+			}
+			if (largo < 0 || posicion + largo > original.length) {
+				return null;
+			}
+			if (tipo.equals(nombre)) {
+				return sinPrefijo(Arrays.copyOfRange(original, posicion, posicion + (int) largo));
+			}
+			posicion += largo;
+			// el PNG lleva 4 bytes de CRC al final de cada bloque; el WebP rellena a par
+			posicion += bigEndian ? 4 : (largo % 2);
+		}
+		return null;
+	}
+
+	/**
+	 * Algunos codificadores escriben el bloque con el mismo prefijo {@code Exif\0\0} que usa el
+	 * JPEG y otros lo escriben pelado, empezando directamente por el orden de bytes del TIFF.
+	 * Las dos formas existen en archivos reales, así que se aceptan las dos.
+	 */
+	private static byte[] sinPrefijo(byte[] bloque) {
+		byte[] prefijo = { 'E', 'x', 'i', 'f', 0, 0 };
+		return bloque.length > prefijo.length && Arrays.equals(bloque, 0, prefijo.length, prefijo, 0, prefijo.length)
+				? Arrays.copyOfRange(bloque, prefijo.length, bloque.length)
+				: bloque;
+	}
+
+	private static long entero(byte[] datos, int posicion, boolean bigEndian) {
+		long valor = 0;
+		for (int i = 0; i < 4; i++) {
+			int desplazamiento = bigEndian ? (3 - i) * 8 : i * 8;
+			valor |= (long) (datos[posicion + i] & 0xFF) << desplazamiento;
+		}
+		return valor;
 	}
 
 	/**

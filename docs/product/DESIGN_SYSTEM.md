@@ -655,7 +655,11 @@ frontend.
 
 ## A qué tamaño se ve un afiche
 
-**Este es el insumo de P16** y por eso es entregable obligatorio: P16 no puede decidir a qué
+✅ **P16 se cerró en D88** con esto como insumo, así que lo de abajo dejó de ser un pendiente y
+pasó a ser la especificación de lo que el backend hace hoy: encaja el afiche en una caja de
+1200×1600 **sin recortar**, no lo agranda nunca, y guarda un JPEG.
+
+**Este era el insumo de P16** y por eso fue entregable obligatorio: P16 no podía decidir a qué
 tamaño se guarda una imagen si no está escrito a qué tamaño se muestra. **Acá van los tamaños y
 nada más: P16 sigue abierto.**
 

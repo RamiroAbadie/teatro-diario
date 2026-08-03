@@ -669,9 +669,10 @@ ofrece "crear «Nombre»" — ⚠️ **`personaId` y `nombrePersona` son excluye
 que la fila guarda uno u otro y nunca los dos. `409` si se repite persona+rol → se marca la fila
 que repite.
 
-**Afiche** ⏳ (D77): en el formulario, un campo de archivo con vista previa local, **límite de
+**Afiche** (D77/D88): en el formulario, un campo de archivo con vista previa local, **límite de
 5 MB avisado antes de subir** (`413` si igual pasa), y un botón de quitar que llama al `DELETE`.
-La pantalla ya se puede escribir; **el endpoint no existe hasta que cierre P16**.
+**El endpoint ya existe** —P16 se cerró en D88— y acepta JPEG, PNG y WebP; lo que se guarda es
+siempre un JPEG, así que la URL termina en `.jpg`.
 
 **Fusionar** (D63): acción de la fila → elegir la ficha destino con el buscador → `Confirmacion`
 variante `peligro` que dice **cuántos registros se van a mudar y que la ficha se borra**, con el
@@ -734,13 +735,13 @@ ninguna historia construye, hay un hueco).
 |---|---|---|
 | HU-01 · HU-02 | 11, + el menú de cuenta del armazón en ≥`md` y **el menú principal en el celular** (D81: ahí vive "Entrar" y "Salir") | completa |
 | HU-03 | 8 | completa |
-| HU-04 | 3, + 5 (link a sala) | ⏳ el afiche y su OG dependen de D77/P16 |
+| HU-04 | 3, + 5 (link a sala) | completa del lado del backend: el afiche existe (D77/D88); falta la pantalla |
 | HU-05 | 4 | completa |
 | HU-06 | 6, + 1 | completa |
 | HU-07 | 7, + el autocompletado de 9 | completa |
 | HU-08 | 10, entrada desde 7 y desde 9 | completa |
 | HU-09 | 9 | completa |
-| HU-10 | 9 + el CTA de 3 | ⏳ `vecesQueLaVi` depende de D76 |
+| HU-10 | 9 + el CTA de 3 | completa del lado del backend: `vecesQueLaVi` existe (D76); falta la pantalla |
 | HU-11 | 9 (edición) + menús de 2 y 8 | completa |
 | HU-12 · HU-13 | 8 | completa |
 | HU-14 | 3 | completa |

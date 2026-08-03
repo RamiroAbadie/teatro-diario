@@ -544,7 +544,7 @@ DELETE /api/admin/producciones/{id}/afiche                                      
 | URL pública | `/afiches/{produccionId}-{version}.jpg` — **fuera de `/api`**, archivo estático (Caddy en producción, ver `FRONTEND_ARCHITECTURE.md` para desarrollo) |
 | Caché | `Cache-Control: public, max-age=31536000, immutable`, **puesto por Caddy en producción** — se puede porque el nombre nunca se reutiliza. En desarrollo lo sirve Next desde `public/` con su `max-age=0` por defecto, que está bien: el header largo es una decisión de producción y se prueba ahí |
 | Procesamiento de la imagen | **decidido en D88**, ver abajo: se encaja en 1200×1600 sin recortar y sin agrandar, calidad 0,82, se aplica la orientación EXIF y se guarda sin metadatos |
-| Errores | `400` formato no soportado o archivo vacío · `413` demasiado grande · `404` producción inexistente |
+| Errores | `400` formato no soportado, archivo vacío o imagen con demasiados píxeles · `413` demasiado grande · `404` producción inexistente. ⚠️ **El `413` es el único de la lista sin test**: lo aplica la configuración de multipart y MockMvc no impone los límites del contenedor (D89) |
 
 **La `{version}` es la pieza central del contrato, y lo que la sostiene es que sea monótona.**
 Que cambie en cada reemplazo es lo que hace que el navegador, WhatsApp y Google vean la imagen
@@ -626,7 +626,7 @@ una tarea de limpieza (D51). Si algún día pesan, se barren comparando el direc
 | Con qué se escribe | el JDK, en **JPEG** — de ahí que la URL termine en `.jpg`. No existe un escritor de WebP en Java puro, y el resto de los caminos pedía un binario del sistema o código nativo |
 | A qué tamaño | **encajado en 1200×1600, sin recortar y sin deformar** (D79), y **nunca se agranda**: el lado mayor que se llega a mostrar es 1200 px y el recorte 2:3 de la grilla lo hace CSS sobre el mismo archivo |
 | Con qué calidad | 0,82 |
-| Orientación EXIF | **se aplica al subir** y el archivo se guarda sin metadatos: si no se aplicara ahí, no la aplica nadie después |
+| Orientación EXIF | **se aplica al subir, en los tres formatos** (D89) y el archivo se guarda sin metadatos: si no se aplicara ahí, no la aplica nadie después. Los tres pueden traerla —el JPEG en un `APP1`, el PNG en un bloque `eXIf` y el WebP en uno `EXIF` de su RIFF— y ninguno de los tres lectores la aplica solo |
 | Tope de píxeles | **50 MP, configurable, comprobado leyendo la cabecera antes de decodificar**. Es lo único de esta lista que es de seguridad: los 5 MB son del archivo comprimido y no acotan la memoria — un PNG de 100 bytes puede declarar 400 millones de píxeles |
 
 El costo asumido, escrito: **JPEG pesa ~25-30% más que WebP a igual calidad**, y eso se paga justo
