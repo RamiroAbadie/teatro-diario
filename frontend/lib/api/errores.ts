@@ -1,10 +1,11 @@
 import type { ErrorDeApi } from "./tipos";
 
 /**
- * `client.ts` y `server.ts` aplanan acá las tres familias de error de API.md en un solo
- * tipo (D78). **Nunca se muestra `undefined`** ni se asume que el cuerpo tiene forma: hay
- * endpoints que responden con el cuerpo vacío y otros que devuelven lo que arma el
- * framework, sin `detail` ni `errores`.
+ * `client.ts` y `server.ts` aplanan acá el error de API.md en un solo tipo (D78). Desde D87
+ * el backend responde **una sola forma** —`ProblemDetail` con `detail` en castellano, y el
+ * mapa `errores` cuando el problema es de campos—, así que esto ya no está reconciliando tres
+ * familias distintas. **Igual no se saca nada**: hay respuestas sin cuerpo por diseño (todos
+ * los `204`), y **nunca se muestra `undefined`** ni se asume que el cuerpo tiene forma.
  */
 
 /** Los errores dicen qué hacer (D79). El `detail` del backend gana cuando vino. */

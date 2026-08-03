@@ -26,7 +26,6 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
 import org.springframework.transaction.support.TransactionTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -339,9 +338,11 @@ class ReportesTest {
 		willThrow(new IllegalStateException("el borrado falla a propósito"))
 				.given(diario).borrarResenia(resenia);
 
-		assertThatThrownBy(() -> mockMvc.perform(conCsrf(post("/api/admin/reportes/" + reporte + "/borrar-resenia"))
-				.with(user("jefa").roles("ADMIN"))))
-				.hasRootCauseMessage("el borrado falla a propósito");
+		mockMvc.perform(conCsrf(post("/api/admin/reportes/" + reporte + "/borrar-resenia"))
+				.with(user("jefa").roles("ADMIN")))
+				.andExpect(status().isInternalServerError())
+				.andExpect(resultado -> assertThat(resultado.getResolvedException())
+						.hasMessageContaining("el borrado falla a propósito"));
 
 		// Ni media resolución: la reseña sigue publicada y el reporte sigue esperando en la cola.
 		mockMvc.perform(get("/api/producciones/" + obra + "/opiniones"))

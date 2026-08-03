@@ -14,7 +14,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.session.ChangeSessionIdAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.CompositeSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
@@ -26,6 +25,7 @@ import org.springframework.security.web.csrf.CsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.CsrfTokenRequestHandler;
 import org.springframework.security.web.savedrequest.NullRequestCache;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * La autorización es un concern transversal de la capa de aplicación, no de los módulos
@@ -96,10 +96,21 @@ class SecurityConfig {
 				new ChangeSessionIdAuthenticationStrategy(), csrf));
 	}
 
+	/**
+	 * El 401 y el 403 de la cadena de filtros, con la misma forma que los errores que salen de un
+	 * controlador. No es un bean con nombre propio para nadie más: lo usa esta configuración y
+	 * nada más.
+	 */
+	@Bean
+	RespuestasDeSeguridad respuestasDeSeguridad(ObjectMapper json) {
+		return new RespuestasDeSeguridad(json);
+	}
+
 	@Bean
 	SecurityFilterChain filtros(HttpSecurity http, CsrfTokenRepository csrfTokenRepository,
 			CsrfTokenRequestHandler csrfTokenRequestHandler,
-			SecurityContextRepository securityContextRepository) throws Exception {
+			SecurityContextRepository securityContextRepository,
+			RespuestasDeSeguridad respuestasDeSeguridad) throws Exception {
 		return http
 				.authorizeHttpRequests(reglas -> reglas
 						.requestMatchers(HttpMethod.POST, "/api/auth/registro", "/api/auth/login").permitAll()
@@ -135,9 +146,12 @@ class SecurityConfig {
 									peticion, respuesta);
 							respuesta.setStatus(HttpStatus.NO_CONTENT.value());
 						}))
-				// Una API responde 401, no redirige a un formulario que no existe.
+				// Una API responde 401, no redirige a un formulario que no existe. Los dos salen
+				// como ProblemDetail igual que los de un controlador: son los únicos errores que
+				// ningún @ControllerAdvice puede tocar, porque pasan antes del despacho.
 				.exceptionHandling(errores -> errores
-						.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
+						.authenticationEntryPoint(respuestasDeSeguridad)
+						.accessDeniedHandler(respuestasDeSeguridad))
 				.build();
 	}
 }

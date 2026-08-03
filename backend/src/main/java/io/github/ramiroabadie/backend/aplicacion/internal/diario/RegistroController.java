@@ -1,6 +1,5 @@
 package io.github.ramiroabadie.backend.aplicacion.internal.diario;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import jakarta.validation.Valid;
@@ -9,9 +8,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -80,19 +76,6 @@ class RegistroController {
 		return ResponseEntity.noContent().build();
 	}
 
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ProblemDetail datosInvalidos(MethodArgumentNotValidException ex) {
-		Map<String, String> porCampo = new LinkedHashMap<>();
-		for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-			porCampo.putIfAbsent(error.getField(), error.getDefaultMessage());
-		}
-		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-				"Revisá los datos del registro");
-		problema.setProperty("errores", porCampo);
-		return problema;
-	}
-
 	/** Las reglas del dominio salen con el mismo formato que la validación: campo y mensaje. */
 	@ExceptionHandler(RegistroInvalidoException.class)
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
@@ -122,12 +105,5 @@ class RegistroController {
 	@ResponseStatus(HttpStatus.FORBIDDEN)
 	public ProblemDetail ajeno(RegistroAjenoException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, ex.getMessage());
-	}
-
-	/** La sesión sigue viva pero la cuenta se borró: para quien escribe es no estar logueado. */
-	@ExceptionHandler(AuthenticationException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ProblemDetail sesionSinCuenta(AuthenticationException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
 	}
 }

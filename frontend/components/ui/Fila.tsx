@@ -20,7 +20,7 @@ import { Afiche } from "./Afiche";
  */
 
 /**
- * `resultado`: título, meta y miniatura ⏳. Toda la fila es el link, que en un celular es la
+ * `resultado`: título, meta y miniatura. Toda la fila es el link, que en un celular es la
  * diferencia entre acertarle al título y acertarle a la fila.
  */
 export function FilaResultado({

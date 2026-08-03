@@ -18,7 +18,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.willThrow;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -145,6 +145,9 @@ class FusionDeProduccionesTest {
 	 * la misma transacción y en ese orden. Si alguien le sacara el {@code @Transactional} al caso
 	 * de uso, o partiera la operación en dos, este test se cae con los registros mudados a una
 	 * ficha que sigue existiendo.
+	 *
+	 * <p>Lo que el cliente ve es el 500 con forma y sin tripas del manejo global de errores; que
+	 * el fallo haya sido este y no otro se comprueba con la excepción que resolvió el despacho.</p>
 	 */
 	@Test
 	void siFallaElBorradoNoQuedaNiMediaFusion() throws Exception {
@@ -155,8 +158,10 @@ class FusionDeProduccionesTest {
 		willThrow(new IllegalStateException("el borrado falla a propósito"))
 				.given(catalogo).borrar(duplicada);
 
-		assertThatThrownBy(() -> fusionar(duplicada, canonica))
-				.hasRootCauseMessage("el borrado falla a propósito");
+		fusionar(duplicada, canonica)
+				.andExpect(status().isInternalServerError())
+				.andExpect(resultado -> assertThat(resultado.getResolvedException())
+						.hasMessageContaining("el borrado falla a propósito"));
 
 		mockMvc.perform(get("/api/usuarios/teresa"))
 				.andExpect(jsonPath("$.registros[0].id").value(registro))

@@ -3,7 +3,6 @@ package io.github.ramiroabadie.backend.aplicacion.internal.social;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -52,12 +51,5 @@ class FeedController {
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	public ProblemDetail cursorInvalido(CursorInvalidoException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-	}
-
-	/** La sesión sigue viva pero la cuenta se borró: no hay feed de nadie. */
-	@ExceptionHandler(AuthenticationException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ProblemDetail sesionSinCuenta(AuthenticationException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
 	}
 }

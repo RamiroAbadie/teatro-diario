@@ -12,12 +12,29 @@ spring:
     # El script de abajo crea índices sobre las tablas, así que tiene que correr después de
     # que Hibernate las haya creado, no antes (que es cuando corre por defecto).
     defer-datasource-initialization: true
+  servlet:
+    multipart:
+      # El tope de la subida de afiches (D77). Acota el archivo comprimido y nada más: el que
+      # acota la memoria es el de píxeles decodificados, que está más abajo.
+      max-file-size: 5MB
+      max-request-size: 6MB
   sql:
     init:
       # `always` porque el default (`embedded`) no alcanza con Postgres. El archivo no trae
       # datos: trae lo que la búsqueda necesita de la base y las entidades no pueden declarar.
       mode: always
       data-locations: classpath:db/busqueda.sql
+
+# Los afiches (D77/D88). El directorio es configurable porque en cada entorno lo sirve otro:
+# en desarrollo Spring escribe adentro de `frontend/public/` y lo sirve Next como estático
+# (D78); en producción es el volumen que monta Caddy en solo lectura (Fase 5). Spring no los
+# sirve en ninguno de los dos.
+afiches:
+  directorio: ${AFICHES_DIR:../frontend/public/afiches}
+  # El tope que sí acota la memoria: un PNG de pocos KB puede declarar dimensiones enormes y
+  # reventar el heap al decodificarse. 50 MP es más grande que cualquier afiche real y más
+  # chico que cualquier bomba de descompresión.
+  maximo-pixeles: 50000000
 
 # Sesión con cookie HTTP-only (D44). `secure: true` entra en la fase de deploy, cuando
 # haya HTTPS: acá haría que la cookie no viaje en http://localhost.

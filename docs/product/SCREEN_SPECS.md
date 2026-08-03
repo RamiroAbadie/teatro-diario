@@ -36,7 +36,9 @@ Convenciones de las tablas:
 - **Cliente**: `apiPublic` (sin cookie, cacheable) o `apiSession` (reenvía cookie, `no-store`).
   **Lo decide la llamada y no el endpoint** (D78): en las pantallas marcadas ⚖️, la misma URL va
   por un cliente o por el otro según haya sesión, y con sesión **todo el árbol** va sin caché.
-- ⏳ = depende de algo que el backend todavía no tiene (D76 `vecesQueLaVi`, D77 afiches).
+- ~~⏳ = depende de algo que el backend todavía no tiene (D76 `vecesQueLaVi`, D77 afiches).~~
+  ✅ **Ya no queda ninguno**: los dos entraron en el paso 3 de la Fase 4 (D76, D77/D88). Las
+  marcas se sacaron de las pantallas; lo que dicen esas zonas hoy es lo que el backend manda.
 
 ---
 
@@ -172,8 +174,9 @@ superior sin una línea de JavaScript ni una dependencia (D73). Además:
 
 ### Errores: qué pinta cada código
 
-La tabla completa está en `FRONTEND_ARCHITECTURE.md` y `client.ts` aplana las tres familias de
-`API.md` en un solo tipo. Acá sólo la traducción a componentes:
+La tabla completa está en `FRONTEND_ARCHITECTURE.md` y `client.ts` aplana el error de `API.md`
+en un solo tipo —desde D87 el backend ya manda una sola forma; lo que sigue decidiendo qué
+pintar es el **contexto**, no el código—. Acá sólo la traducción a componentes:
 
 | Situación | Componente |
 |---|---|
@@ -206,7 +209,7 @@ sala**. En todas: `title`, `description`, `og:title`, `og:description`, `og:imag
 `og:type=website`, `twitter:card=summary_large_image` y **`canonical` con la URL de D74** (que es
 la mitad de para qué existe el `308`).
 
-`og:image`: el afiche tal cual cuando existe ⏳, y si no la placa tipográfica de 1200×630, siempre
+`og:image`: el afiche tal cual cuando existe, y si no la placa tipográfica de 1200×630, siempre
 oscura (D79). El perfil y el artista **no tienen imagen propia**: usan la placa con el username o
 el nombre. **Sin `og:image` no se cae nada**: el preview queda con título y descripción, que es
 degradado y no roto.
@@ -319,14 +322,14 @@ test literal: pegar el link en WhatsApp.
 la forma canónica.
 
 **Composición** (celular, de arriba hacia abajo)
-1. **Cabecera.** Con afiche ⏳: imagen full-width (`contain`, alto máximo 60 vh) y debajo el
+1. **Cabecera.** Con afiche: imagen full-width (`contain`, alto máximo 60 vh) y debajo el
    título en `text-3xl` serif. **Sin afiche: el título arriba, más grande, y la ficha en una
    columna — no hay placa** (D79: la ficha cambia de forma, no deja un hueco). En ≥`md` con
    afiche, dos columnas.
 2. **Chip de estado** (D8) + sala con link a la pantalla 5 (si `sala !== null`).
 3. **Bloque de opiniones**: `Puntaje` variante `promedio` — "8,4 /10 · 17 personas puntuaron" — y
    al lado el CTA del gesto:
-   - `vecesQueLaVi: null` ⏳ → nada (no hay sesión).
+   - `vecesQueLaVi: null` → nada (no hay sesión).
    - `0` → `Boton` primario "Registrar que la vi".
    - `N ≥ 1` → "La viste N veces" + `Boton` secundario "Registrar de nuevo" (D19: el re-visto se
      ofrece, no se esconde).
@@ -352,7 +355,7 @@ de WhatsApp— es la primera.
 
 **Criterios**: HU-04 ✔ todos los campos, con SSR y OG · **el test literal: pegar el link en
 WhatsApp muestra título + afiche + sinopsis** · HU-14 ✔ promedio con un decimal y coma decimal ·
-HU-10 ⏳ la ficha evidencia que la viste N veces · una ficha sin afiche, sin sala, sin sinopsis y
+HU-10 la ficha evidencia que la viste N veces · una ficha sin afiche, sin sala, sin sinopsis y
 sin reseñas **se sigue viendo terminada**.
 
 ---
@@ -368,7 +371,7 @@ sin reseñas **se sigue viendo terminada**.
 | OG | sí (placa con el nombre) |
 
 **Composición**: nombre en `text-3xl` serif · las participaciones **agrupadas por rol** (Dirección,
-Dramaturgia, Actuación), cada una como `Fila` variante `resultado` con miniatura ⏳, título, chip
+Dramaturgia, Actuación), cada una como `Fila` variante `resultado` con miniatura, título, chip
 de estado y link a la ficha. Nada más: D14 dice sin foto y sin bio, y esta pantalla **no inventa
 un lugar donde ponerlas**.
 
@@ -410,7 +413,7 @@ contrato no los trae y pedirlos sería una agenda (X4, P6).
 | OG | sí |
 
 **Composición**: `h1` "En cartel" · grilla de `Tarjeta` variante `grilla` (**2 columnas / 3 en
-`sm` / 4 en `lg`**), cada celda con afiche o placa ⏳, título y sala — **el título una sola vez:
+`sm` / 4 en `lg`**), cada celda con afiche o placa, título y sala — **el título una sola vez:
 con afiche debajo de la imagen, sin afiche adentro de la placa y nada más** (D86) · después, encabezado
 `text-xl` **"Próximamente"** y la misma grilla, con su chip. **Sin filtros, sin calendario, sin
 barrio, sin orden configurable** (D79): el orden lo da la API y el primer filtro es la primera
@@ -669,9 +672,10 @@ ofrece "crear «Nombre»" — ⚠️ **`personaId` y `nombrePersona` son excluye
 que la fila guarda uno u otro y nunca los dos. `409` si se repite persona+rol → se marca la fila
 que repite.
 
-**Afiche** ⏳ (D77): en el formulario, un campo de archivo con vista previa local, **límite de
+**Afiche** (D77/D88): en el formulario, un campo de archivo con vista previa local, **límite de
 5 MB avisado antes de subir** (`413` si igual pasa), y un botón de quitar que llama al `DELETE`.
-La pantalla ya se puede escribir; **el endpoint no existe hasta que cierre P16**.
+**El endpoint ya existe** —P16 se cerró en D88— y acepta JPEG, PNG y WebP; lo que se guarda es
+siempre un JPEG, así que la URL termina en `.jpg`.
 
 **Fusionar** (D63): acción de la fila → elegir la ficha destino con el buscador → `Confirmacion`
 variante `peligro` que dice **cuántos registros se van a mudar y que la ficha se borra**, con el
@@ -734,13 +738,13 @@ ninguna historia construye, hay un hueco).
 |---|---|---|
 | HU-01 · HU-02 | 11, + el menú de cuenta del armazón en ≥`md` y **el menú principal en el celular** (D81: ahí vive "Entrar" y "Salir") | completa |
 | HU-03 | 8 | completa |
-| HU-04 | 3, + 5 (link a sala) | ⏳ el afiche y su OG dependen de D77/P16 |
+| HU-04 | 3, + 5 (link a sala) | completa del lado del backend: el afiche existe (D77/D88); falta la pantalla |
 | HU-05 | 4 | completa |
 | HU-06 | 6, + 1 | completa |
 | HU-07 | 7, + el autocompletado de 9 | completa |
 | HU-08 | 10, entrada desde 7 y desde 9 | completa |
 | HU-09 | 9 | completa |
-| HU-10 | 9 + el CTA de 3 | ⏳ `vecesQueLaVi` depende de D76 |
+| HU-10 | 9 + el CTA de 3 | completa del lado del backend: `vecesQueLaVi` existe (D76); falta la pantalla |
 | HU-11 | 9 (edición) + menús de 2 y 8 | completa |
 | HU-12 · HU-13 | 8 | completa |
 | HU-14 | 3 | completa |
@@ -748,28 +752,32 @@ ninguna historia construye, hay un hueco).
 | HU-16 | 2 | completa |
 | HU-17 · HU-18 | 2 y 3 | completa |
 | HU-19 | 12a | completa |
-| HU-20 | 12b | ⏳ la subida de afiche espera P16 |
+| HU-20 | 12b | completa del lado del backend: la subida de afiche existe (D77/D88); falta la pantalla |
 | HU-21 | 12c | completa |
 | HU-22 | 12d | completa |
 
-**Las 13 pantallas de USER_FLOWS tienen entrada y ninguna quedó sin historia.** Lo único que
-bloquea el cierre de una historia es backend, no diseño: `vecesQueLaVi` (D76) y los afiches
-(D77 + P16).
+**Las 13 pantallas de USER_FLOWS tienen entrada y ninguna quedó sin historia.** Lo que bloqueaba
+el cierre de tres historias era backend y no diseño —`vecesQueLaVi` (D76) y los afiches (D77 +
+P16)—, y **ya no bloquea**: las dos cosas entraron en el paso 3 de la Fase 4. Lo que falta para
+cerrarlas son las pantallas.
 
 ## Lo que este documento deja anotado y no resuelve
 
-1. **Los dos ⏳.** Las pantallas están especificadas contra el contrato acordado; **no andan hasta
-   que el backend las tenga.** Las zonas afectadas están marcadas y ninguna deja un hueco visual
-   mientras tanto: sin `aficheUrl` la ficha ya se ve terminada (D79), y sin `vecesQueLaVi` el CTA
-   simplemente no se dibuja.
+1. ~~**Los dos ⏳.**~~ ✅ **Cerrados en el paso 3 de la Fase 4**: `vecesQueLaVi` (D76) y los
+   afiches (D77/D88) los manda el backend. Lo que este documento había previsto para mientras
+   tanto sigue siendo cierto y no era un parche: sin `aficheUrl` la ficha se ve terminada igual
+   (D79) y sin `vecesQueLaVi` el CTA simplemente no se dibuja — que es lo que hay que hacer
+   cuando llega `null`, o sea sin sesión.
 2. ~~**Con qué se genera la placa de `og:image`.**~~ ✅ **Cerrado en D85**, al escribir la ficha:
    `next/og` con un Noto Serif subseteado de 30 KB embebido en `frontend/assets/` —satori no lee
    fuentes del sistema— y una ruta propia, `app/og/{tipo}/{id}`, para que la regla "si hay afiche,
    el `og:image` es el afiche" se pueda escribir. **No era P16 y no lo tocó.**
-3. **P16** sigue abierto: herramienta, formato, calidad, EXIF y tope de píxeles decodificados. Los
-   tamaños ya los fijó D79.
-4. **El `@ControllerAdvice` que falta** (hueco 2 de `API.md`): mientras no exista, la validación
-   fina del panel es del cliente. Está en el ROADMAP como trabajo de backend de esta fase.
+3. ~~**P16**~~ ✅ **Cerrado en D88** —TwelveMonkeys para leer y JPEG a la salida, con la calidad,
+   el EXIF y el tope de píxeles— sobre los tamaños que había fijado D79. **La URL del afiche
+   termina en `.jpg`**, no en `.webp`.
+4. ~~**El `@ControllerAdvice` que falta**~~ ✅ **Existe (D87)**: el panel recibe `errores` por
+   campo como cualquier otro formulario. La validación fina del cliente **no se va** —sigue siendo
+   lo que evita el viaje— pero dejó de ser la única fuente del mensaje.
 5. **Lo que cuesta el armazón de cuatro piezas** (D81). En un celular de 360×640 el cromo fijo
    pasa de ~128 px a **~178 px** y quedan **~460 px de contenido**. Está aceptado, pero deja una
    **verificación pendiente y concreta: la ficha (pantalla 3) con el afiche a 60 vh contra el

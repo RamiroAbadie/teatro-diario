@@ -144,20 +144,50 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    necesita una URL pública, o sea la Fase 5. Lo que sí está verificado es lo que lo sostiene:
    los `<meta>` con URL absoluta y la placa de 1200×630 generada y mirada en los dos casos
    (título corto y título de 79 caracteres). **Y sigue pendiente la verificación de D81**: la
-   ficha con el afiche a 60 vh contra el cromo del armazón — no se puede medir hasta que haya
-   un afiche (P16), y hoy la ficha sin afiche cambia de forma y entra sobrada.
+   ficha con el afiche a 60 vh contra el cromo del armazón. **Ya no la bloquea P16**, que cerró
+   en D88: el endpoint existe y se puede subir un afiche de prueba. Lo que falta para medirla es
+   la pantalla que lo suba (paso 6) o una subida a mano por `curl`; hoy la ficha sin afiche cambia
+   de forma y entra sobrada.
 3. **Lo que le queda al backend**, todo salido de escribir `API.md` y sin lo cual hay pantallas
-   que no cierran: la subida de afiches con redimensionado y versionado (HU-20, D72/D77,
-   adelantada desde la Fase 5), el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice`
-   que unifique las respuestas de error — hoy no hay ninguno y los formularios del admin no
-   devuelven errores por campo.
-   ⚠️ **La subida de afiches todavía no se puede empezar**: le falta una decisión, no código.
-   Con qué se decodifica, redimensiona y codifica la imagen es **P16**, y es una dependencia
-   nueva que D51 exige decidir y no adoptar — el JDK no escribe WebP y el `pom.xml` no tiene
-   ninguna librería de imágenes. **La mitad que dependía del diseño ya está**: D79 fijó las
-   dimensiones (caja de origen 1200×1600 **sin recortar**, un solo archivo, el recorte de la
-   grilla lo hace CSS), así que lo que queda de P16 es herramienta, formato, calidad, EXIF y
-   tope de píxeles decodificados.
+   que no cierran. Va en dos entregas y la primera está hecha:
+   ~~el `vecesQueLaVi` que cierra HU-10 (D76) y un `@ControllerAdvice` que unifique las
+   respuestas de error~~ **HECHO.** `vecesQueLaVi` sale de `opinionesDe` como pregunta aparte
+   —una consulta que solo se paga con sesión— con los tres estados de la convención de D67/D68:
+   nulo sin sesión, `0` con sesión y sin registros —que es lo que habilita el CTA— y el
+   re-visto de D19 cuando la vio varias veces. Y **las tres familias de error de `API.md` pasan a
+   ser una sola** (D87): `ProblemDetail` con `detail` en castellano siempre, `errores` por campo
+   en **todos** los formularios y no en cuatro —que es lo que al panel admin le faltaba—, el
+   `401`/`403` de la cadena de filtros con la misma forma, y el fallo inesperado como un `500`
+   con forma y sin tripas. Los errores de dominio no se movieron: la forma se unifica, el
+   significado lo sigue decidiendo el endpoint. **79 tests en verde**, `ModulithArchitectureTest`
+   incluido: el advice no nombra una sola clase interna de un módulo.
+   ~~La segunda entrega: la subida de afiches~~ **HECHO también, y con eso cierra el paso 3.**
+   `POST` y `DELETE /api/admin/producciones/{id}/afiche` con el contrato de D77 entero: el
+   **contador monótono** que nunca se reinicia ni se reutiliza —lo que hace que el `immutable` de
+   un año no sea una mentira—, `afiche_actual` separado de él, el orden de las cuatro operaciones
+   (reservar → escribir → publicar → borrar el viejo) con **la reserva en una sola sentencia
+   atómica**, **la publicación con la fila bloqueada** y **el borrado del archivo después del
+   commit y fuera de la transacción**, y el `DELETE` idempotente. Los tests que el contrato
+   exigía son **15**, y los tres que importan más que el camino feliz son el del contador que no
+   se reinicia y los **dos solapamientos con dos transacciones de verdad** —una tiene la fila
+   tomada medio segundo y la otra tiene que esperarla—, que **fallan si se le saca el bloqueo al
+   repositorio**: comprobado sacándolo. Los otros dos, que corren los pasos intercalados en un
+   solo hilo, prueban el orden y no el bloqueo, y así están nombrados. **94 tests en verde.**
+   ⚠️ **Esos dos tests de bloqueo entraron después, en D89**, junto con la orientación EXIF en los
+   tres formatos y el movimiento atómico que dejó de degradar en silencio: los encontró una
+   auditoría del paso, y los tres eran defectos reales.
+   ✅ **P16 quedó cerrada en D88**: **TwelveMonkeys** para leer (Java puro, sin binarios nativos;
+   acepta los tres formatos que promete `API.md` y no se planta con los JPEG CMYK de imprenta) y
+   **JPEG a la salida**, porque no existe un escritor de WebP en Java puro. Eso **cambia la URL
+   pública de `.webp` a `.jpg` y enmienda D77 en ese punto y en ningún otro**. Lo demás de P16
+   también: 1200×1600 sin recortar y sin agrandar (D79), calidad 0,82, EXIF aplicado al subir y
+   archivo guardado sin metadatos, y un **tope de 50 MP comprobado leyendo la cabecera antes de
+   decodificar** —lo único de la lista que es de seguridad: los 5 MB son del archivo comprimido y
+   no acotan la memoria—.
+   ⚠️ **Lo que de los afiches sigue pendiente es de la Fase 5 y está anotado allá**: que Caddy
+   sirva `/afiches` desde el volumen, y que ese volumen tenga su propio backup (D45/D77). En
+   desarrollo ya funciona sin nada de eso: Spring escribe en `frontend/public/afiches/` y lo
+   sirve Next como estático (D78).
 4. Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
    gesto de registro con autocompletado y el desvío a sugerir sin perder lo tipeado
    (HU-08/09/10), editar y borrar con confirmación (HU-11).

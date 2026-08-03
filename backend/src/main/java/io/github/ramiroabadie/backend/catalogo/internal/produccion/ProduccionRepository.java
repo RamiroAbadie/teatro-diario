@@ -4,8 +4,11 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import jakarta.persistence.LockModeType;
+
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -81,4 +84,33 @@ interface ProduccionRepository extends JpaRepository<Produccion, Long> {
 	/** El paso dos de la búsqueda: las filas completas, con su sala, de los ids que ya se eligieron. */
 	@EntityGraph(attributePaths = "sala")
 	List<Produccion> findByIdIn(Collection<Long> ids);
+
+	/**
+	 * Quema un número de versión de afiche y devuelve cuál quemó (D77), o {@code null} si esa
+	 * ficha no existe. **Una sola sentencia y no leer-sumar-guardar**: dos subidas simultáneas
+	 * tienen que reservar números distintos, y leer-sumar-guardar pierde actualizaciones, que es
+	 * exactamente lo que el contrato promete que no pasa. El {@code RETURNING} es de Postgres,
+	 * igual que el {@code DISTINCT ON} del promedio (D42).
+	 *
+	 * <p>Va sin {@code @Modifying} aunque sea un {@code UPDATE}: con él, Hibernate la ejecuta
+	 * como una sentencia que no devuelve nada y Postgres le contesta con una fila —"A result was
+	 * returned when none was expected"—. Es una sentencia de escritura que además consulta, y
+	 * como consulta hay que declararla.</p>
+	 */
+	@Query(value = """
+			UPDATE produccion SET afiche_version = afiche_version + 1
+			WHERE id = :id
+			RETURNING afiche_version
+			""", nativeQuery = true)
+	Integer reservarVersionDeAfiche(@Param("id") Long id);
+
+	/**
+	 * La fila bloqueada para publicar (D77), el mismo {@code select ... for update} de D69/D70:
+	 * leer el afiche anterior y escribir el nuevo tienen que ser una sola cosa, o dos
+	 * publicaciones intercaladas dejan a una borrando el archivo que la otra acaba de publicar.
+	 * Sin {@code @EntityGraph}: acá no se arma ninguna respuesta, se tocan dos columnas.
+	 */
+	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@Query("select p from Produccion p where p.id = :id")
+	Optional<Produccion> bloquearPorId(@Param("id") Long id);
 }

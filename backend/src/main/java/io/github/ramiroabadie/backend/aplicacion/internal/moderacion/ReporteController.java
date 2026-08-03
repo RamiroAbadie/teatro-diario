@@ -1,17 +1,11 @@
 package io.github.ramiroabadie.backend.aplicacion.internal.moderacion;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 import jakarta.validation.Valid;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -81,26 +75,5 @@ class ReporteController {
 	@ResponseStatus(HttpStatus.BAD_REQUEST)
 	public ProblemDetail propia(ReseniaPropiaException ex) {
 		return ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, ex.getMessage());
-	}
-
-	/** Campo y mensaje, como el resto de los formularios que llena una persona. */
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	@ResponseStatus(HttpStatus.BAD_REQUEST)
-	public ProblemDetail datosInvalidos(MethodArgumentNotValidException ex) {
-		Map<String, String> porCampo = new LinkedHashMap<>();
-		for (FieldError error : ex.getBindingResult().getFieldErrors()) {
-			porCampo.putIfAbsent(error.getField(), error.getDefaultMessage());
-		}
-		ProblemDetail problema = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST,
-				"Revisá los datos del reporte");
-		problema.setProperty("errores", porCampo);
-		return problema;
-	}
-
-	/** La sesión sigue viva pero la cuenta se borró: para quien escribe es no estar logueado. */
-	@ExceptionHandler(AuthenticationException.class)
-	@ResponseStatus(HttpStatus.UNAUTHORIZED)
-	public ProblemDetail sesionSinCuenta(AuthenticationException ex) {
-		return ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, ex.getMessage());
 	}
 }

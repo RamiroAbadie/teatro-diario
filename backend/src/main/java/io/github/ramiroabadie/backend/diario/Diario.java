@@ -80,6 +80,19 @@ public interface Diario {
 	OpinionesDeProduccion opinionesDe(Long produccionId);
 
 	/**
+	 * Cuántas veces esa persona registró esa producción (HU-10, D76): lo que hace que la ficha
+	 * pueda decir "la viste 2 veces" en vez de ofrecer registrarla como si fuera la primera.
+	 *
+	 * <p>Va aparte de {@link #opinionesDe} y no adentro porque son dos preguntas distintas: el
+	 * promedio y las reseñas son los mismos para todo el mundo (D21) y esto es de a uno. Quien
+	 * llama lo pregunta solo si hay sesión, así que la consulta no se paga en la visita anónima,
+	 * que es la mayoría. Cero es una respuesta válida —"no la viste todavía"—; que eso se dibuje
+	 * distinto de "no hay nadie mirando" es de la capa de aplicación, que es la única que sabe si
+	 * hay sesión.</p>
+	 */
+	long vecesRegistrada(Long usuarioId, Long produccionId);
+
+	/**
 	 * Quién escribió esa reseña, o vacío si ese id no es una reseña —no existe, o existe y nadie
 	 * escribió nada en él—. Lo pregunta la capa de aplicación antes de dejar que alguien le dé
 	 * like (HU-17) o la reporte (HU-18), y no es la misma situación que seguir a alguien (D67):

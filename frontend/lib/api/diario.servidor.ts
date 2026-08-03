@@ -3,7 +3,7 @@ import type { Opiniones } from "./tipos";
 
 /**
  * Diario, **lado servidor**. Hoy es la mitad de la ficha que no es del catálogo (D60): el
- * promedio de D20, las reseñas y —cuando el backend lo tenga (⏳ D76)— `vecesQueLaVi`. El
+ * promedio de D20, las reseñas y `vecesQueLaVi` (D76). El
  * perfil entero (`GET /api/usuarios/{username}`) entra con la pantalla 8, paso 5.
  *
  * ⚠️ **Es uno de los dos `GET` abiertos que cambian de respuesta con cookie** (`API.md`):

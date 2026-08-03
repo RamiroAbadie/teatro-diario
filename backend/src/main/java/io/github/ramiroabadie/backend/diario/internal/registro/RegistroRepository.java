@@ -35,6 +35,12 @@ interface RegistroRepository extends JpaRepository<Registro, Long> {
 	List<Registro> findByProduccionIdAndReseniaIsNotNullOrderByCreadoEnDesc(Long produccionId);
 
 	/**
+	 * Cuántas veces alguien registró esa producción (HU-10, D76). Cuenta registros y no
+	 * producciones distintas: el re-visto (D19) es justamente lo que este número muestra.
+	 */
+	long countByUsuarioIdAndProduccionId(Long usuarioId, Long produccionId);
+
+	/**
 	 * Quién escribió esa reseña, si ese id es una reseña y no un registro sin texto o un número
 	 * inventado (HU-17, HU-18). Devuelve la columna sola y no la fila: lo único que se pregunta es
 	 * de quién es.

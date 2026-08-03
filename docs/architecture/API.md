@@ -1,6 +1,14 @@
 # API
 
-> Estado: v1.2 — escrito al abrir la Fase 4 y corregido en dos revisiones (la segunda: el feed
+> Estado: v1.4 — el paso 3 de la Fase 4 (lo que le quedaba al backend) cierra **los tres huecos**
+> que este documento tenía anotados, y **este documento se queda sin ⏳**: `vecesQueLaVi` existe,
+> el manejo global de errores existe —la sección de errores se reescribió: donde había tres
+> familias que el frontend tenía que tolerar, ahora hay una sola (D87)— y **los afiches también,
+> con un cambio en el contrato que hay que leer: la URL termina en `.jpg` y no en `.webp`**,
+> porque no existe un escritor de WebP en Java puro (D88, que enmienda D77 en ese punto y en
+> ningún otro). Lo anterior no cambia.
+>
+> La v1.2 se escribió al abrir la Fase 4 y se corrigió en dos revisiones (la segunda: el feed
 > separado de los `GET` abiertos personalizados, la nulabilidad real de la cola de reportes, las
 > dos formas del `409` del alta y el contrato inmutable de los afiches).
 > **Es el contrato que consume el frontend**: las formas de respuesta vivían solo en los
@@ -9,11 +17,10 @@
 > Regla de mantenimiento: si cambia un DTO, cambia este documento **en el mismo PR**. Un
 > contrato desactualizado es peor que ninguno, porque se le cree.
 
-**⏳ = decidido pero todavía no implementado.** Son dos cosas, las dos de la Fase 4 y las dos con
-decisión en el log: los afiches —sus dos endpoints y el campo `aficheUrl` en la ficha y en el
-resumen (D72/D77)— y `vecesQueLaVi` (D76). Están acá porque el frontend se diseña contra el
-contrato acordado, pero **hoy no responden**: la pantalla que las use no anda hasta que el
-backend las tenga. Lo que no lleva ⏳ está implementado y verificado contra el código.
+✅ **Ya no queda nada marcado como pendiente.** Todo lo que este documento describe está
+implementado y verificado contra el código; el ⏳ que llevaban los afiches y `vecesQueLaVi` se
+cayó en el paso 3 de la Fase 4. Lo que sigue afuera del backend es el reparto de `/afiches` en
+Caddy y el volumen, que son de la Fase 5 y no cambian este contrato.
 
 ## Convenciones transversales
 
@@ -46,7 +53,7 @@ hace que se le sirva a alguien la página de otro:
 
 | Endpoint abierto y personalizado | Qué agrega la sesión |
 |---|---|
-| `GET /api/producciones/{id}/opiniones` | `leDiLike` en cada reseña y `vecesQueLaVi` ⏳ |
+| `GET /api/producciones/{id}/opiniones` | `leDiLike` en cada reseña y `vecesQueLaVi` |
 | `GET /api/usuarios/{username}` | `loSigo` |
 
 **`GET /api/feed` no es de esta familia y no hay que contarlo entre ellos**: no es un endpoint
@@ -67,42 +74,56 @@ previa. **El token se rota en las tres puertas de la sesión: `registro`, `login
 las tres pasan por la misma estrategia de autenticación—, así que después de cualquiera de ellas
 hay que releer la cookie: la anterior ya no sirve. Sin el header, la respuesta es `403`.
 
-### Errores: qué se puede prometer y qué no
+### Errores: una sola forma (D87)
 
-⚠️ **No hay manejo global de errores.** No existe ningún `@ControllerAdvice` en el proyecto:
-cada controller declara sus propios `@ExceptionHandler`. Eso parte las respuestas de error en
-tres familias, y el frontend tiene que tolerar las tres:
-
-| Familia | Quiénes | Forma |
-|---|---|---|
-| **`ProblemDetail` con `detail`** | los errores que cada controller declara: 404, 409, 403 de dueño, 400 de dominio | `application/problem+json` con `detail` legible |
-| **`ProblemDetail` + `errores` por campo** | **solo** los cuatro controladores que declaran el handler de validación: identidad (**alta de cuenta y login**, que comparten controlador), registro de diario, reporte y sugerencia | igual, más el mapa `errores` |
-| **Lo que arme el framework** | todo lo demás: los `401` y `403` de Spring Security, el `403` de CSRF, y **la validación de todos los formularios del admin** | **sin garantía de `detail` ni de `errores`** |
+✅ **Todo error de esta API es un `ProblemDetail` con `detail` en castellano.** Las tres familias
+que este documento describía —y que el frontend tenía que tolerar— se unificaron en el paso 3 de
+la Fase 4: entró un `@ControllerAdvice` global y los dos manejadores de la cadena de filtros.
 
 ```jsonc
-// familia 1
+// la forma, siempre
 { "type": "about:blank", "title": "Not Found", "status": 404,
   "detail": "No existe una producción con id 7" }
 
-// familia 2 — es lo que permite pintar el error al lado de cada input
-{ "status": 400, "detail": "Revisá los datos ingresados",
+// y cuando el problema es de campos, el mapa además — es lo que permite pintar el error al lado
+// de cada input, y ahora lo devuelven TODOS los formularios, el panel admin incluido
+{ "type": "about:blank", "title": "Bad Request", "status": 400,
+  "detail": "Revisá los datos ingresados",
   "errores": { "username": "Entre 3 y 20 caracteres: letras, números o guión bajo" } }
 ```
 
-**Consecuencias para el frontend, que no son negociables hasta que esto se normalice:**
-- El cliente HTTP tiene que **degradar con gracia**: si no hay `detail`, un mensaje propio por
-  código de estado. Nunca mostrar `undefined` ni asumir que el cuerpo tiene forma.
-- **Los formularios del admin (salas, personas, producciones, aprobar, rechazar, fusionar) no
-  devuelven `errores` por campo.** Un `400` ahí es "revisá el formulario" a secas. La validación
-  fina se hace en el cliente y el `400` es la red de contención, no la fuente del mensaje.
-- **`errores` puede faltar incluso en un endpoint que normalmente lo manda.** El caso concreto
-  es el `409` del alta de cuenta: ver abajo.
-- Un `401` puede venir con cuerpo vacío. No es un error a mostrar: es "no hay sesión" — y qué
-  hacer con él depende de para qué se llamó, no del código (`FRONTEND_ARCHITECTURE.md`).
+Lo que garantiza:
 
-Normalizar esto —un `@ControllerAdvice` que unifique las tres familias— es trabajo de backend y
-está anotado como hueco al final. **Mientras no exista, este documento no promete más de lo que
-el código hace.**
+| Antes | Ahora |
+|---|---|
+| Los formularios del admin devolvían `400` sin decir qué campo | **`errores` por campo en todos**: salas, personas, producciones, sugerencias, reportes, registros y alta de cuenta |
+| El `401`/`403` de Spring Security y el `403` de CSRF salían con lo que armara el framework, o con el cuerpo vacío | `ProblemDetail` con `detail`, igual que el resto |
+| Un `404` de ruta inexistente, un JSON roto o un `405` salían con el cuerpo genérico de Boot, en inglés cuando traían mensaje | `ProblemDetail` con `detail` **en castellano** |
+| Un fallo inesperado escapaba sin forma | `500` con `detail` genérico —"Algo falló de nuestro lado…"— y el error completo en el log del servidor, nunca en la respuesta |
+
+Los mensajes por estado, cuando el error lo detectó el framework y no el dominio: `400` "Revisá
+los datos ingresados" · `401` "No hay una sesión iniciada" · `403` "No tenés permiso para hacer
+eso" (o "El token de seguridad venció. Probá de nuevo" si es de CSRF, que son dos cosas
+distintas: una no se arregla reintentando y la otra sí) · `404` "Eso no existe o ya no está" ·
+`405` "Esa acción no se puede hacer así" · `415` "Ese tipo de contenido no se acepta" · `5xx`
+"Algo falló de nuestro lado. Probá de nuevo en un rato".
+
+**Lo que NO cambió, y es a propósito:** los errores de dominio siguen declarados en su
+controlador. La forma es la misma para todos, pero *qué significa* cada uno lo decide el
+endpoint, no el tipo — `DataIntegrityViolationException` es un `409` al borrar una sala y un
+`204` al dar dos veces el mismo like—, y la mitad de esas excepciones son internas de su módulo,
+que la capa de aplicación no puede ni nombrar (ADR-001). Un `@ExceptionHandler` de un controlador
+le gana al global, que es lo que mantiene en pie los mensajes que son una decisión: el `401` del
+login sigue diciendo "Email/usuario o contraseña incorrectos" sin revelar cuál de los dos falló
+(HU-02).
+
+**Lo que el frontend sigue teniendo que hacer**, y no es deuda sino buen cliente HTTP:
+- **Degradar con gracia igual**: si un día falta `detail`, un mensaje propio por código de
+  estado. Nunca mostrar `undefined`. Hay respuestas sin cuerpo por diseño (todos los `204`).
+- **`errores` está solo cuando el problema es de campos.** Un `409` de alta de cuenta puede venir
+  con el mapa o sin él, según sea el chequeo o la carrera del índice único: ver abajo.
+- Un `401` **no es un error a mostrar**: es "no hay sesión", y qué hacer con él depende de para
+  qué se llamó, no del código (`FRONTEND_ARCHITECTURE.md`).
 
 ### Fechas
 
@@ -133,7 +154,7 @@ Dos tipos distintos y no hay que confundirlos:
 | `promedio` | nadie puntuó todavía · `promedioPropio`: nunca puntuó |
 | `siguienteCursor` | no hay más páginas — **pero ojo con lo contrario**, ver el feed |
 | `texto` de la cola de reportes | el texto se borró **o** el registro entero desapareció — se distinguen mirando `produccion`, ver la cola |
-| `aficheUrl` ⏳ | la ficha no tiene afiche, que es el caso normal y no un error (D71) |
+| `aficheUrl` | la ficha no tiene afiche, que es el caso normal y no un error (D71) |
 
 **Enums:** `EstadoProduccion` = `EN_CARTEL` · `CERRADA` · `PROXIMAMENTE` (D8).
 `RolParticipacion` = `ACTUACION` · `DIRECCION` · `DRAMATURGIA` (D17).
@@ -162,7 +183,7 @@ Dos tipos distintos y no hay que confundirlos:
 | POST | `/api/sugerencias` | sesión | HU-08 |
 | CRUD | `/api/admin/salas` · `/api/admin/personas` | admin | HU-19/20 |
 | CRUD + `?estado=` + PATCH | `/api/admin/producciones` | admin | HU-20 |
-| POST · DELETE ⏳ | `/api/admin/producciones/{id}/afiche` | admin | HU-20 (D77) |
+| POST · DELETE | `/api/admin/producciones/{id}/afiche` | admin | HU-20 (D77/D88) |
 | POST | `/api/admin/producciones/{id}/fusionar` | admin | HU-20 (D63) |
 | GET + aprobar/rechazar | `/api/admin/sugerencias` | admin | HU-21 |
 | GET + borrar/desestimar | `/api/admin/reportes` | admin | HU-22 |
@@ -242,7 +263,7 @@ cualquier otra respuesta. ✅ **Comprobado** contra el backend corriendo (D82): 
   "id": 12, "titulo": "...", "sinopsis": "...",
   "obraOriginal": "...", "autorOriginal": "...",   // D13, texto libre
   "estado": "EN_CARTEL",
-  "aficheUrl": "/afiches/12-3.webp",               // ⏳ D77 — null si no tiene
+  "aficheUrl": "/afiches/12-3.jpg",                // D77/D88 — null si no tiene
   "sala": { "id": 3, "nombre": "Sala Casacuberta", "complejo": "Teatro San Martín" },
   "participaciones": [
     { "id": 88, "persona": { "id": 40, "nombre": "..." }, "rol": "DIRECCION" }
@@ -259,7 +280,7 @@ Una persona puede aparecer en varias participaciones de la misma ficha, una por 
 {
   "promedio": 8.4,          // ⚠️ último rating de cada usuario (D20), NO un AVG. null si nadie puntuó
   "cantidadRatings": 17,    // personas, no registros
-  "vecesQueLaVi": 2,        // ⏳ D76 — null sin sesión; 0..N con sesión
+  "vecesQueLaVi": 2,        // D76 — null sin sesión; 0..N con sesión
   "resenias": [
     { "registroId": 91, "autor": "ramiro", "texto": "...", "rating": 9,
       "fecha": "2026-03-01", "granularidad": "MES",
@@ -295,7 +316,7 @@ número. `0` es "no la viste" y habilita el CTA de registrar; `null` es "no hay 
 listado del admin:
 ```jsonc
 { "id": 12, "titulo": "...", "estado": "EN_CARTEL",
-  "aficheUrl": "/afiches/12-3.webp",     // ⏳ D77
+  "aficheUrl": "/afiches/12-3.jpg",      // D77/D88
   "sala": { "id": 3, "nombre": "...", "complejo": "..." } }
 ```
 
@@ -445,8 +466,8 @@ acá **sin perder lo que ya se había tipeado** en el buscador del gesto.
 
 ## Panel de admin
 
-Todo pide rol `ADMIN`; sin él, **`403`**. Sin sesión, **`401`**. Ninguno de estos endpoints
-devuelve `errores` por campo: ver la sección de errores.
+Todo pide rol `ADMIN`; sin él, **`403`**. Sin sesión, **`401`**. Desde D87 estos endpoints
+**sí devuelven `errores` por campo** como el resto: ver la sección de errores.
 
 ### Salas (HU-19) y Personas (HU-20)
 
@@ -477,7 +498,7 @@ accionable ("reasignalas antes de borrarla") que la pantalla puede mostrar tal c
 | `PATCH` | `/{id}/estado` | `200` + ficha |
 | `DELETE` | `/{id}` | `204` |
 | `POST` | `/{id}/fusionar` | `200` + resultado de la fusión |
-| `POST` · `DELETE` ⏳ | `/{id}/afiche` | ver abajo |
+| `POST` · `DELETE` | `/{id}/afiche` | ver abajo |
 
 El `?estado=` es lo que hace trivial el barrido semanal (Flujo 4, D37): se lista lo que está
 `EN_CARTEL` y se cierra en un clic con el `PATCH`, sin salir del listado.
@@ -504,7 +525,7 @@ sala o una persona referenciada no existe · **`409`** si la misma persona repit
   duplicada pasan a la canónica y la duplicada se borra, todo o nada. **`400`** si origen y
   destino son el mismo. **Necesita confirmación en la pantalla: es irreversible.**
 
-### Afiches ⏳ (HU-20, D72/D77)
+### Afiches (HU-20, D72/D77/D88)
 
 ```
 POST   /api/admin/producciones/{id}/afiche    multipart/form-data, campo "archivo"  → 200 + ficha
@@ -515,15 +536,15 @@ DELETE /api/admin/producciones/{id}/afiche                                      
 |---|---|
 | Formatos aceptados | JPEG, PNG, WebP |
 | Tamaño máximo de subida | 5 MB (`413` si se pasa) |
-| Qué se guarda | **un solo archivo por producción**, redimensionado al subir y convertido a WebP (D45) |
+| Qué se guarda | **un solo archivo por producción**, redimensionado al subir y convertido a **JPEG** (D45, formato por D88) |
 | Versionado | dos columnas en la ficha: `afiche_version` (**contador monótono**, arranca en `0`, solo sube, **nunca se reinicia ni se reutiliza**) y `afiche_actual` (**la versión que está publicada, o `null` si hoy no tiene afiche**) |
-| `aficheUrl` | se deriva de `afiche_actual`: `null` si es `null`, y si no `/afiches/{id}-{afiche_actual}.webp` |
+| `aficheUrl` | se deriva de `afiche_actual`: `null` si es `null`, y si no `/afiches/{id}-{afiche_actual}.jpg` |
 | Reemplazo | el mismo `POST`: reserva una versión nueva, escribe el archivo, **después** publica y **al final** borra el viejo (ver el orden) |
 | Borrado | `DELETE` deja `afiche_actual: null` —y con eso `aficheUrl: null`, que es un estado normal (D71)— y después borra el archivo. **`afiche_version` no se toca** |
-| URL pública | `/afiches/{produccionId}-{version}.webp` — **fuera de `/api`**, archivo estático (Caddy en producción, ver `FRONTEND_ARCHITECTURE.md` para desarrollo) |
+| URL pública | `/afiches/{produccionId}-{version}.jpg` — **fuera de `/api`**, archivo estático (Caddy en producción, ver `FRONTEND_ARCHITECTURE.md` para desarrollo) |
 | Caché | `Cache-Control: public, max-age=31536000, immutable`, **puesto por Caddy en producción** — se puede porque el nombre nunca se reutiliza. En desarrollo lo sirve Next desde `public/` con su `max-age=0` por defecto, que está bien: el header largo es una decisión de producción y se prueba ahí |
-| Procesamiento de la imagen ⏳ | **sin decidir: P16.** Ver abajo |
-| Errores | `400` formato no soportado o archivo vacío · `413` demasiado grande · `404` producción inexistente |
+| Procesamiento de la imagen | **decidido en D88**, ver abajo: se encaja en 1200×1600 sin recortar y sin agrandar, calidad 0,82, se aplica la orientación EXIF y se guarda sin metadatos |
+| Errores | `400` formato no soportado, archivo vacío o imagen con demasiados píxeles · `413` demasiado grande · `404` producción inexistente. ⚠️ **El `413` es el único de la lista sin test**: lo aplica la configuración de multipart y MockMvc no impone los límites del contenedor (D89) |
 
 **La `{version}` es la pieza central del contrato, y lo que la sostiene es que sea monótona.**
 Que cambie en cada reemplazo es lo que hace que el navegador, WhatsApp y Google vean la imagen
@@ -540,7 +561,7 @@ quedado sin afiche tres veces.
 | # | Paso | Si falla acá |
 |---|---|---|
 | 1 | Reservar la versión: `afiche_version = afiche_version + 1` → `n`, **confirmado en la base antes de tocar el disco** | no se escribió nada; `n` queda quemado y no se reusa nunca, que es exactamente lo que se quiere |
-| 2 | Escribir `/{id}-{n}.webp` en el volumen | la ficha sigue mostrando lo que mostraba (el afiche viejo, o ninguno). A lo sumo queda un archivo a medio escribir que nadie referencia |
+| 2 | Escribir `/{id}-{n}.jpg` en el volumen | la ficha sigue mostrando lo que mostraba (el afiche viejo, o ninguno). A lo sumo queda un archivo a medio escribir que nadie referencia |
 | 3 | Publicar: `afiche_actual = n` — **recién acá la URL nueva existe para el mundo** | el archivo nuevo queda **huérfano e invisible**: nadie conoce su URL. La ficha sigue coherente |
 | 4 | Borrar el archivo de la versión anterior | huérfano, y ya está: la ficha apunta al nuevo, que existe |
 
@@ -576,7 +597,7 @@ lo mismo que ya cerró las colas de D69/D70, sin herramienta nueva:
   **La misma frontera vale para el `DELETE`**: `afiche_actual = null` → commit → borrar el
   archivo. Nunca al revés, nunca en la misma transacción.
 - **El archivo del paso 2 se escribe en un temporal y se mueve al nombre definitivo con un
-  movimiento atómico.** Así nadie puede leer un `.webp` a medio escribir, y el "archivo a medio
+  movimiento atómico.** Así nadie puede leer un `.jpg` a medio escribir, y el "archivo a medio
   escribir" que la tabla acepta como huérfano queda con nombre de temporal y no de afiche.
 
 **Qué hay que testear, y qué no alcanza.** Dos subidas *seguidas* prueban que el contador avanza
@@ -597,24 +618,21 @@ Los huérfanos se aceptan como basura tolerada: a 50 fichas y un reemplazo ocasi
 una tarea de limpieza (D51). Si algún día pesan, se barren comparando el directorio contra los
 `afiche_actual` vivos de la base — todo lo demás sobra por definición.
 
-⚠️ **Lo que este contrato todavía NO decide, y hay que decidir antes de escribir el endpoint
-(P16).** "Redimensionado al subir y convertido a WebP" describe el resultado, no cómo se llega:
+✅ **Cómo se procesa la imagen, que este contrato había dejado abierto como P16, lo cierra D88:**
 
-- **Con qué se hace.** El JDK lee JPEG y PNG con `ImageIO` pero **no escribe WebP**, y el
-  `pom.xml` no tiene ninguna librería de imágenes. Cualquier camino —una dependencia Java, un
-  binario del sistema, o cambiar el formato de salida a JPEG y no depender de nada— es una
-  herramienta nueva que **D51 exige decidir explícitamente, como se decidió Tailwind en D73**.
-- **A qué tamaño.** Ancho/alto de salida, si se recorta o se encaja, y con qué calidad. Esto
-  **depende de `DESIGN_SYSTEM.md`**, que todavía no existe: es el que dice a qué tamaño se ve un
-  afiche en la ficha y en la grilla.
-- **Orientación EXIF.** Una foto de celular sin rotar aplicada se guarda acostada.
-- **Tope de píxeles decodificados.** El límite de 5 MB es del archivo comprimido y no acota la
-  memoria: un PNG chico puede declarar dimensiones enormes. Hace falta un tope de dimensiones
-  además del de bytes, y es lo único de esta lista que es de seguridad y no de calidad.
+| Qué | Decidido |
+|---|---|
+| Con qué se lee | **TwelveMonkeys** (`imageio-jpeg` + `imageio-webp`), dos dependencias nuevas decididas como se decidió Tailwind (D73). Son **lectores**: acepta los tres formatos de entrada y no se planta con los JPEG CMYK de imprenta, que es lo que llega en un afiche |
+| Con qué se escribe | el JDK, en **JPEG** — de ahí que la URL termine en `.jpg`. No existe un escritor de WebP en Java puro, y el resto de los caminos pedía un binario del sistema o código nativo |
+| A qué tamaño | **encajado en 1200×1600, sin recortar y sin deformar** (D79), y **nunca se agranda**: el lado mayor que se llega a mostrar es 1200 px y el recorte 2:3 de la grilla lo hace CSS sobre el mismo archivo |
+| Con qué calidad | 0,82 |
+| Orientación EXIF | **se aplica al subir, en los tres formatos** (D89) y el archivo se guarda sin metadatos: si no se aplicara ahí, no la aplica nadie después. Los tres pueden traerla —el JPEG en un `APP1`, el PNG en un bloque `eXIf` y el WebP en uno `EXIF` de su RIFF— y ninguno de los tres lectores la aplica solo |
+| Tope de píxeles | **50 MP, configurable, comprobado leyendo la cabecera antes de decodificar**. Es lo único de esta lista que es de seguridad: los 5 MB son del archivo comprimido y no acotan la memoria — un PNG de 100 bytes puede declarar 400 millones de píxeles |
 
-Nada de esto cambia el contrato HTTP de arriba —las rutas, los códigos, la URL pública y el
-versionado se pueden congelar igual—, pero **la implementación no puede empezar sin resolverlo**,
-y resolverlo inventando una dependencia sería justo lo que D51 prohíbe.
+El costo asumido, escrito: **JPEG pesa ~25-30% más que WebP a igual calidad**, y eso se paga justo
+en el preview de WhatsApp que ADR-003 vino a comprar. Es la parte reversible del contrato: gracias
+al versionado, cambiar de formato el día que se pueda es el codificador y una constante, y la
+migración es volver a subir los ~50 afiches (D38) — **ninguna URL vieja se reutiliza jamás**.
 
 ⚠️ **El volumen de afiches necesita su propio backup.** El `pg_dump` de D45 respalda PostgreSQL
 y las imágenes no están en PostgreSQL: son dos backups distintos, con dos restauraciones
@@ -717,17 +735,18 @@ reseña, no solo al que se tocó (D70):
 
 ## Huecos conocidos
 
-Lo que falta o no cierra, para que no se descubra a mitad de una pantalla. Los **dos** primeros
-son **trabajo de backend de esta misma fase** (y están en el ROADMAP como tales); del 3 en
-adelante son límites aceptados, no deuda.
+Lo que falta o no cierra, para que no se descubra a mitad de una pantalla. **Los dos primeros ya
+están cerrados** y quedan escritos para que se entienda qué cambió; del 3 en adelante son límites
+aceptados, no deuda.
 
-1. **Los dos ⏳.** Los afiches (D72/D77) y `vecesQueLaVi` (D76) no existen todavía. Las pantallas
-   que dependen de ellos no cierran hasta que el backend los tenga. Y a los afiches les falta
-   además una decisión, no solo código: **P16**, cómo se procesa la imagen al subirla — va después
-   de `DESIGN_SYSTEM.md` y bloquea el endpoint, no las pantallas.
-2. **No hay manejo global de errores.** Sin `@ControllerAdvice`, los formularios del admin y todo
-   lo que resuelve Spring Security responden con la forma que arme el framework. Normalizarlo es
-   backend; mientras tanto el cliente HTTP degrada con gracia (ver la sección de errores).
+1. ~~**El ⏳ de los afiches.**~~ **Cerrado**: los dos endpoints existen, con el versionado, el
+   orden de las cuatro operaciones y los tests de solapamiento que D77 exigía, y P16 se resolvió
+   en D88 (TwelveMonkeys para leer, JPEG a la salida). Lo único que sigue pendiente de los
+   afiches es de la **Fase 5** y no toca este contrato: que Caddy sirva `/afiches` desde el
+   volumen y que ese volumen tenga su propio backup (D45 ampliada por D77).
+2. ~~**No hay manejo global de errores.**~~ **Cerrado en D87**: hay `@ControllerAdvice` y los dos
+   manejadores de la cadena de filtros, así que las tres familias son una sola y los formularios
+   del admin devuelven `errores` por campo. Ver la sección de errores.
 3. **No hay listado público del catálogo entero**: se llega por en-cartel, por búsqueda o por
    link. Es coherente con USER_FLOWS —no existe una pantalla "todas las obras"— pero conviene
    saberlo antes de buscar el endpoint. El listado completo existe pero es del admin.
