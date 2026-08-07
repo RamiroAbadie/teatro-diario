@@ -15,6 +15,18 @@ import { aErrorDeApi, FalloDeApi } from "./errores";
 
 type Metodo = "POST" | "PUT" | "PATCH" | "DELETE";
 
+/**
+ * Qué hacer con el `401`, que es lo único que una llamada puede necesitar decidir por su
+ * cuenta. **El código no alcanza: hace falta el contexto** (D78).
+ *
+ * El caso que obliga a que esto exista es el login: `POST /api/auth/login` responde `401`
+ * cuando las credenciales están mal, y ahí `401` **no significa "tu sesión venció"** sino
+ * "esos datos no son". Mandarlo al manejador global sería recargar la pantalla de login
+ * desde la pantalla de login, perdiendo lo tipeado y sin llegar a mostrar nunca el mensaje
+ * genérico que HU-02 pide.
+ */
+type Opciones = { alPerderLaSesion?: "ir-al-login" | "devolver-el-error" };
+
 /** Lectura desde el navegador (búsqueda, paginado del feed). No necesita token. */
 export async function apiGet<T>(ruta: string): Promise<T> {
   return leer<T>(await fetch(ruta, { headers: { Accept: "application/json" }, cache: "no-store" }));
@@ -28,7 +40,12 @@ export async function apiGet<T>(ruta: string): Promise<T> {
  * No hace falta releer nada a mano después de `registro`, `login` y `logout` —donde el
  * token se rota (D57)—: cada mutación vuelve a leer la cookie.
  */
-export async function apiMutar<T>(metodo: Metodo, ruta: string, cuerpo?: unknown): Promise<T> {
+export async function apiMutar<T>(
+  metodo: Metodo,
+  ruta: string,
+  cuerpo?: unknown,
+  { alPerderLaSesion = "ir-al-login" }: Opciones = {},
+): Promise<T> {
   const token = await tokenCsrf();
 
   // Regla 3 de la semilla: la mutación NO se dispara a ciegas. Sin token es un `403`
@@ -36,13 +53,13 @@ export async function apiMutar<T>(metodo: Metodo, ruta: string, cuerpo?: unknown
   if (!token) throw new FalloDeApi({ status: 0, mensaje: SIN_TOKEN });
 
   const primera = await enviar(metodo, ruta, cuerpo, token);
-  if (primera.status !== 403) return leer<T>(primera);
+  if (primera.status !== 403) return leer<T>(primera, alPerderLaSesion);
 
   // Regla 5: se relee la cookie —el `403` pudo traer una nueva— y se reintenta UNA vez.
   const relectura = await tokenCsrf();
-  if (!relectura) return leer<T>(primera);
+  if (!relectura) return leer<T>(primera, alPerderLaSesion);
 
-  return leer<T>(await enviar(metodo, ruta, cuerpo, relectura));
+  return leer<T>(await enviar(metodo, ruta, cuerpo, relectura), alPerderLaSesion);
 }
 
 const SIN_TOKEN = "No pudimos preparar el envío. Revisá la conexión y probá de nuevo.";
@@ -104,7 +121,10 @@ function leerCookie(nombre: string): string | null {
   return null;
 }
 
-async function leer<T>(respuesta: Response): Promise<T> {
+async function leer<T>(
+  respuesta: Response,
+  alPerderLaSesion: NonNullable<Opciones["alPerderLaSesion"]> = "ir-al-login",
+): Promise<T> {
   if (respuesta.ok) {
     if (respuesta.status === 204) return null as T;
     const texto = await respuesta.text();
@@ -115,8 +135,10 @@ async function leer<T>(respuesta: Response): Promise<T> {
 
   // El manejador global del `401`: sesión ausente o vencida en algo protegido. No es "un
   // error del servidor". Se vuelve a donde estaba, y lo tipeado sobrevive en
-  // `sessionStorage` (D80). El `401` de "¿hay alguien?" no pasa por acá: es la semilla.
-  if (error.status === 401) irALogin();
+  // `sessionStorage` (D80). Los dos `401` que NO pasan por acá son los que significan otra
+  // cosa: el de "¿hay alguien?" —la semilla, que va con un `fetch` desnudo— y el de las
+  // credenciales del login, que lo pide con `devolver-el-error`.
+  if (error.status === 401 && alPerderLaSesion === "ir-al-login") irALogin();
 
   throw new FalloDeApi(error);
 }

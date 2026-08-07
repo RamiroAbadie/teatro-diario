@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 
+import { HojaDelGesto } from "@/components/diario/HojaDelGesto";
 import { BloqueInferior } from "@/components/layout/BloqueInferior";
 import { Cabecera } from "@/components/layout/Cabecera";
 import { Pie } from "@/components/layout/Pie";
@@ -37,6 +38,14 @@ export default async function LayoutDelSitio({ children }: { children: ReactNode
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
       <Pie />
       <BloqueInferior cuenta={cuenta} />
+
+      {/* ⚠️ **Una sola hoja para las 13 pantallas** (D80): el gesto no es una ruta, se abre
+          desde tres lugares y en dos de ellos el contexto de atrás importa. Va acá y no en
+          cada pantalla porque el `<dialog>` tiene que sobrevivir a la navegación del
+          armazón. **Sólo con sesión**: sin cuenta no se llega —el botón persistente del
+          visitante va a `/registro`— y montarla igual sería cargar el autocompletado y el
+          borrador en la visita anónima, que son casi todas. */}
+      {cuenta && <HojaDelGesto />}
     </div>
   );
 }

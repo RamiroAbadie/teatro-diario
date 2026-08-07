@@ -10,10 +10,10 @@ import { IconoBuscar } from "./Iconos";
  * **Los estados vacíos hablan del usuario, no del sistema**: "Todavía no registraste nada",
  * no "No hay datos".
  *
- * ⚠️ De las cinco variantes están escritas las tres que tienen pantalla en este paso:
- * `informativo`, `error` y `no-encontrado`. `invitacion` (diario vacío) y `sin-resultados`
- * (búsqueda, con el texto tipeado adentro del botón) entran con las suyas, porque su copy
- * **es** su comportamiento.
+ * ⚠️ De las cinco variantes falta una sola: `invitacion` (diario vacío), que entra con la
+ * pantalla 8 porque su copy **es** su comportamiento. `sin-resultados` **no vive acá**: es
+ * este mismo componente con el texto tipeado adentro del botón, y quien lo compone es la
+ * pantalla de búsqueda, que es la única que sabe qué se buscó.
  */
 
 type Props = {
@@ -54,7 +54,7 @@ export function EstadoVacio({ titulo, children, accion, conBuscador = false, niv
  */
 function BuscadorEmbebido() {
   return (
-    <form action="/buscar" className="mx-auto mt-6 flex max-w-sm items-center gap-2">
+    <form action="/buscar" method="get" className="mx-auto mt-6 flex max-w-sm items-center gap-2">
       <label htmlFor="q-vacio" className="sr-only">
         Buscar obras, artistas y usuarios
       </label>

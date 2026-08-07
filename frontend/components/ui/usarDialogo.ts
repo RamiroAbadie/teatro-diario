@@ -20,8 +20,15 @@ import type { MouseEvent } from "react";
  *    —lo que consume la entrada que empujamos— y recién después navega, así el "atrás" de
  *    la pantalla nueva vuelve a la anterior y no a una entrada fantasma.
  * 3. **El clic afuera y `Esc` cancelan, nunca confirman.**
+ *
+ * ⚠️ **`conHistorial: false` es para lo que se superpone a otra cosa que ya empujó su
+ * entrada**, y hoy es un solo caso: el `Confirmacion` de borrar, que se abre **adentro** de
+ * la hoja del gesto. Si los dos empujaran, cancelar la confirmación haría `history.back()`,
+ * y ese `popstate` cerraría también la hoja que está debajo — o sea que cancelar borraría lo
+ * tipeado. Sin entrada propia, cancelar no toca el historial y "atrás" cierra las dos, que es
+ * lo que se espera de "atrás".
  */
-export function usarDialogo() {
+export function usarDialogo({ conHistorial = true }: { conHistorial?: boolean } = {}) {
   const ref = useRef<HTMLDialogElement>(null);
   const [abierto, setAbierto] = useState(false);
   const empujado = useRef(false);
@@ -32,10 +39,12 @@ export function usarDialogo() {
     const dialogo = ref.current;
     if (!dialogo || dialogo.open) return;
     dialogo.showModal();
-    window.history.pushState({ dialogo: true }, "");
-    empujado.current = true;
+    if (conHistorial) {
+      window.history.pushState({ dialogo: true }, "");
+      empujado.current = true;
+    }
     setAbierto(true);
-  }, []);
+  }, [conHistorial]);
 
   const cerrar = useCallback(() => ref.current?.close(), []);
 

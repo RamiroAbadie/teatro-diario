@@ -54,6 +54,10 @@ export function Boton({
   href,
   className = "",
   disabled,
+  // ⚠️ **`button` por defecto y no `submit`**, que es lo que hace el HTML. Adentro de un
+  // formulario, un botón sin `type` lo envía: "Borrar registro" en la hoja del gesto abría
+  // la confirmación **y** publicaba el registro. El que envía lo dice (`type="submit"`).
+  type = "button",
   ...resto
 }: Props) {
   // La opacidad va sobre el botón entero y no sólo sobre el texto: así el texto conserva
@@ -71,7 +75,7 @@ export function Boton({
   }
 
   return (
-    <button className={clases} disabled={bloqueado} {...resto}>
+    <button type={type} className={clases} disabled={bloqueado} {...resto}>
       {contenido}
     </button>
   );

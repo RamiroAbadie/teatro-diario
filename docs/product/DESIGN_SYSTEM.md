@@ -1,6 +1,15 @@
 # Design System
 
-> Estado: v1.3 — el paso 2 de la Fase 4 cierra la pregunta que este documento dejó anotada
+> Estado: v1.4 — el paso 4 de la Fase 4 escribe **los dos componentes que faltaban de los diez**,
+> `Aviso` y `Confirmacion`, con lo que **la lista está completa**. Dos precisiones y ningún
+> cambio de sistema (D90): **`Campo`/`CampoLargo` viven en `ui/` y no son un undécimo componente**
+> —los diez son el vocabulario visual del producto; eso es la plomería de un formulario, y está
+> ahí por la regla de pertenencia, igual que `usarDialogo` y `usarBorrador`—; y **la escala de
+> puntaje del gesto es un control segmentado**, porque en 360 px diez objetivos separados no
+> llegan a 32 px de ancho y con los bordes compartidos dan 31,9. Los tokens, la paleta y la
+> escala tipográfica **no cambian**.
+>
+> La v1.3 — el paso 2 de la Fase 4 cierra la pregunta que este documento dejó anotada
 > —**con qué se genera la placa de `og:image`**: `next/og` con una Noto Serif subseteada de
 > 30 KB embebida en `frontend/assets/`, que **no es una webfont** porque el navegador no la
 > descarga nunca (**D85**)— y corrige **la celda de la grilla** contra lo que se vio al
@@ -324,12 +333,25 @@ botón seguir, confirmación. **Son 10, y el cambio no es inflación:**
   panel— y el aviso de `global: true` del feed (D22/D66). Nada de eso es un estado vacío: hay
   contenido, y encima hay algo que decir.
 
+⚠️ **Y `Campo`/`CampoLargo` no son un undécimo** (D90). Están en `components/ui/` y **la lista
+sigue siendo de diez**, porque los diez son el **vocabulario visual** del producto —lo que se ve en
+una pantalla terminada— y un campo de formulario es plomería: etiqueta, control, ayuda, y el error
+debajo del input. Está en `ui/` por la **regla de pertenencia** que sigue abajo —no sabe de ningún
+dominio y lo usan cuatro pantallas— y no por la lista; es el mismo lugar y el mismo criterio que
+`usarDialogo.ts` (D82) y `usarBorrador.ts`. Leer la lista como un inventario de archivos obligaría
+a repetir la misma etiqueta y el mismo `aria-describedby` en cuatro pantallas, que es exactamente
+lo que la regla existe para evitar.
+
 **Regla de pertenencia, que ya fijó `FRONTEND_ARCHITECTURE.md` y acá no se afloja:** un componente
 nace en la carpeta de su dominio y **sube a `ui/` recién cuando lo usa una segunda pantalla**, y
 ahí pierde todo lo que sabía del dominio. Estos diez ya nacen arriba porque las 13 pantallas los
 repiten. **La escala de 1-10 del gesto no está en esta lista** justamente por esa regla: hoy la
 usa una sola pantalla (el gesto, en crear y en editar, que es el mismo formulario), así que vive
-en `components/diario/` hasta que otra la necesite.
+en `components/diario/` hasta que otra la necesite. ⚠️ **Y al escribirla se corrigió su forma**
+(D90): es **un control segmentado, con los bordes compartidos**, y no diez botones separados. La
+cuenta es la que manda: en un celular de 360 quedan **328 px** adentro de la hoja, y diez objetivos
+con separación no llegan a los 32 px de ancho; sin separación dan **31,9**, que se lee como una
+escala y cumple de sobra el mínimo de 24 px de WCAG 2.5.8 AA. El alto de 44 no se toca.
 
 ⚠️ **Por la misma regla, el menú principal y la barra de destinos de D81 no entran en esta lista y
 el listado sigue siendo de diez.** Parece que los usan las 13 pantallas, pero no: **los usa el

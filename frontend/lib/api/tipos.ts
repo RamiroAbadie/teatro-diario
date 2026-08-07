@@ -47,6 +47,31 @@ export type ProduccionResumen = {
 
 export type Participacion = { id: number; persona: Persona; rol: RolParticipacion };
 
+/**
+ * Lo que devuelve `GET /api/buscar/usuarios` (D65). **Las salas no se buscan** (D23): se
+ * navegan desde las fichas, así que no hay un tipo para eso y no falta.
+ */
+export type UsuarioResultado = { id: number; username: string; creadoEn: string };
+
+/**
+ * `POST /api/sugerencias` (HU-08, D69). **Sólo el título es obligatorio**, y `sala` y
+ * `elenco` son texto libre y no ids del catálogo: quien sugiere no sabe si existen.
+ */
+export type NuevaSugerencia = {
+  titulo: string;
+  sala: string | null;
+  anio: number | null;
+  elenco: string | null;
+  comentario: string | null;
+};
+
+/**
+ * La respuesta del `201`, que **es** la confirmación de recibido: lo propuesto, devuelto tal
+ * cual entró. Sin estado adentro, y no es un olvido — no hay nada que consultar después
+ * (MD-3), y por eso la pantalla de acuse dibuja esto y no un "pendiente".
+ */
+export type SugerenciaRecibida = NuevaSugerencia & { id: number };
+
 /** `GET /api/producciones/{id}`. **No trae promedio ni reseñas**: eso es Diario (D60). */
 export type Ficha = {
   id: number;
@@ -88,6 +113,39 @@ export type ReseniaDeFicha = {
   likes: number;
   /** Convención de tres estados: `null` es "no hay botón que dibujar" (D68). */
   leDiLike: boolean | null;
+  creadoEn: string;
+};
+
+/**
+ * El cuerpo del gesto (`POST /api/registros`, `PUT /api/registros/{id}`). **El mismo para
+ * crear y para editar**: editar reemplaza el gesto entero, incluida la producción, porque
+ * equivocarse de obra al elegirla del buscador es el error más probable.
+ *
+ * Sólo `produccionId` y `granularidad` son obligatorios, y con `SIN_FECHA` la `fecha` va en
+ * `null` (D59/MD-1).
+ */
+export type NuevoRegistro = {
+  produccionId: number;
+  fecha: string | null;
+  granularidad: Granularidad;
+  rating: number | null;
+  resenia: string | null;
+};
+
+/**
+ * La unidad que aparece en el diario, en el feed y en la respuesta del gesto.
+ *
+ * ⚠️ `enCatalogo: false` significa que el admin borró la ficha: **el título se muestra igual
+ * pero no se linkea** (D62). Es un caso a dibujar, no un error. **No trae `aficheUrl`** ni lo
+ * va a traer (D77): la fila del diario y del feed funciona tipográficamente.
+ */
+export type RegistroDeDiario = {
+  id: number;
+  produccion: { id: number; titulo: string; enCatalogo: boolean };
+  fecha: string | null;
+  granularidad: Granularidad;
+  rating: number | null;
+  resenia: string | null;
   creadoEn: string;
 };
 

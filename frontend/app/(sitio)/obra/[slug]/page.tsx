@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound, permanentRedirect } from "next/navigation";
 import { cache } from "react";
 
+import { CtaDelGesto } from "@/components/catalogo/CtaDelGesto";
 import { Elenco } from "@/components/catalogo/Elenco";
 import { Resenias } from "@/components/catalogo/Resenias";
 import { ChipDeEstado } from "@/components/ui/Chip";
@@ -20,7 +21,7 @@ import { idDesdeSlug, rutaObra, rutaSala, slugify } from "@/lib/rutas";
 import { rutaDeLaPlaca } from "@/lib/og";
 
 /**
- * **Pantalla 3 · Ficha de producción** (HU-04, HU-14; HU-10 y HU-17/18 ⏳). Es **la pantalla
+ * **Pantalla 3 · Ficha de producción** (HU-04, HU-14, HU-10; HU-17/18 ⏳). Es **la pantalla
  * más importante del producto**: el destino del Flujo 1 y la que HU-04 mide con un test
  * literal — pegar el link en WhatsApp y ver el preview.
  *
@@ -142,17 +143,22 @@ export default async function FichaPage({ params }: Props) {
             )}
           </p>
 
-          <div className="mt-6">
-            {opiniones ? (
+          {/* El bloque de opiniones: el promedio y, al lado, el CTA del gesto. Los dos
+              salen de la misma llamada y **los dos degradan juntos**: si `opiniones` falló,
+              acá no hay nada que dibujar y la ficha se muestra igual. */}
+          {opiniones && (
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
               <PuntajePromedio
                 promedio={opiniones.promedio}
                 cantidadRatings={opiniones.cantidadRatings}
               />
-            ) : null}
-            {/* **El CTA del gesto no se dibuja todavía**, y no es un olvido: `vecesQueLaVi`
-                (D76) ya lo manda el backend, pero falta la hoja del gesto (paso 4). Con `null`
-                la regla ya está escrita: no hay sesión, no hay zona. */}
-          </div>
+              <CtaDelGesto
+                vecesQueLaVi={opiniones.vecesQueLaVi}
+                produccionId={ficha.id}
+                titulo={ficha.titulo}
+              />
+            </div>
+          )}
 
           {ficha.sinopsis && (
             <p className="mt-6 max-w-[65ch] whitespace-pre-line">{ficha.sinopsis}</p>

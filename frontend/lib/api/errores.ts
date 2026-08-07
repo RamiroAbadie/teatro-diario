@@ -65,6 +65,33 @@ function esMapaDeErrores(valor: unknown): valor is Record<string, string> {
 }
 
 /**
+ * Lo que un formulario necesita de un error, que son dos cosas y nunca las dos a la vez:
+ * **el mapa por campo** cuando el problema es de campos, o **un mensaje general** cuando no
+ * lo es (el `409` sin `errores` del alta, un `5xx`, la red caída). Es la traducción directa
+ * de las dos primeras filas de la tabla de errores de D78, y vive acá porque la van a usar
+ * los cuatro formularios del paso 4 y los del panel después.
+ *
+ * ⚠️ **Ningún formulario se vacía ni se refresca por esto.** Cuando el problema es lo que el
+ * usuario escribió, refrescar le hace perder el trabajo y no resuelve nada: lo que hay que
+ * cambiar es un dato.
+ */
+export function comoFormulario(error: unknown): {
+  general: string | null;
+  campos: Record<string, string>;
+} {
+  if (error instanceof FalloDeApi) {
+    return error.errores
+      ? { general: null, campos: error.errores }
+      : { general: error.mensaje, campos: {} };
+  }
+
+  // Lo que no es un `FalloDeApi` es que el `fetch` ni llegó a responder: no hay red, o el
+  // backend no está. No hay código de estado que traducir y el genérico dice lo que se
+  // puede hacer.
+  return { general: "No pudimos conectar. Revisá la conexión y probá de nuevo.", campos: {} };
+}
+
+/**
  * Lo que tiran los dos clientes cuando la respuesta no es 2xx. Las pantallas la atrapan y
  * deciden por CÓDIGO Y CONTEXTO: el mismo `404` es una página de error en una ruta
  * pública y el camino feliz a sugerir en el gesto de registro (la tabla de D78).

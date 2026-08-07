@@ -81,6 +81,26 @@
   }
 }
 
+/* La ÚNICA animación de posición del sistema (D79): la hoja del gesto entra
+   desde abajo en el celular, 200 ms. Todo lo demás —el menú principal, la
+   confirmación— aparece sin desplazarse. El bloque de `prefers-reduced-motion`
+   de más abajo la reduce a nada, que es por qué esto es una animación y no una
+   transición escrita a mano. */
+@keyframes subir-hoja {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 47.999rem) {
+  dialog.hoja-del-gesto[open] {
+    animation: subir-hoja 200ms ease-out;
+  }
+}
+
 /* Transiciones: 150 ms y sólo de color, background-color, border-color y
    opacity. Nada se mueve de lugar, nada escala (D79). */
 @media (prefers-reduced-motion: reduce) {

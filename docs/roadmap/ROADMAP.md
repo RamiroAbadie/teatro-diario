@@ -188,9 +188,32 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    sirva `/afiches` desde el volumen, y que ese volumen tenga su propio backup (D45/D77). En
    desarrollo ya funciona sin nada de eso: Spring escribe en `frontend/public/afiches/` y lo
    sirve Next como estático (D78).
-4. Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
+4. ~~Cuentas y el gesto: alta/login (HU-01/02), búsqueda con su resultado vacío (HU-07), el
    gesto de registro con autocompletado y el desvío a sugerir sin perder lo tipeado
-   (HU-08/09/10), editar y borrar con confirmación (HU-11).
+   (HU-08/09/10), editar y borrar con confirmación (HU-11).~~ **HECHO**, en tres entregas.
+   Están las **pantallas 7, 9, 10 y 11**, y con ellas **el camino del catálogo cerrado
+   entero** —los tres momentos que D71 mandó diseñar a mano: la búsqueda sin resultados que
+   deriva con lo tipeado adentro del botón, el formulario de un solo campo obligatorio, y el
+   acuse que **es una pantalla y dice que no va a haber aviso** (MD-3)—. **El gesto quedó como
+   lo pedía P8**: seis toques y ningún tipeo más que el título, con la última opción del
+   autocompletado siempre en "sugerirla" —esperar la lista vacía no sirve: con `pg_trgm` casi
+   siempre vuelve *algo*— y con el `404` del `POST` tratado como camino y no como error.
+   **Cierra de paso el hueco que el paso 2 había dejado anotado**: el CTA de la ficha, que
+   ahora dibuja los tres estados de `vecesQueLaVi` (D76). Entran `Aviso` (ui/9),
+   `Confirmacion` (ui/10) —con lo que **los diez de `DESIGN_SYSTEM.md` están completos**—,
+   `Campo`/`CampoLargo`, `usarBorrador`, la escala 1-10 de `components/diario/` y los tres
+   clientes de navegador que faltaban. Decisiones que hicieron falta: **D90**, que recoge
+   **cuatro defectos que el paso encontró**, uno de ellos con el navegador y no leyendo —**sin
+   hidratar, un formulario sin `method` mandaba la contraseña en la URL**—, y **D91**, que es
+   lo que encontraron la auditoría y la re-auditoría: **cuatro defectos más, todos con la misma
+   forma —un efecto corriendo detrás de otro—**, empezando por el borrador que no se borraba al publicar y
+   dejaba el gesto siguiente con la fecha de ayer. D91 cierra además el pendiente que D83
+   había dejado (la banda de "no pudimos verificar tu sesión": por ahora no se dibuja, y se
+   revisa en el paso 5) y corrige `SCREEN_SPECS.md` en el retorno por `?volver=`.
+   ⚠️ **Lo que este paso deja anotado y no resuelve**: **editar y borrar (HU-11) no tienen
+   punto de entrada todavía** —los menús de tres puntos del diario y del feed son el paso 5,
+   así que lo único que se probó de esa mitad es el contrato— y **el borrador que sobrevive al
+   `401` es una pieza del gesto**, con su propia marca, no una regla general del armazón.
 5. Perfil/diario con estados vacíos y stats (HU-03/12/13), home logueada con el feed y su
    aviso de fallback (HU-16), seguir (HU-15), likes y reportar (HU-17/18).
 6. Panel admin: las cuatro caras que ya tienen backend —salas, producciones con estados,

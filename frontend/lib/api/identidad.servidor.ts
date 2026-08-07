@@ -62,8 +62,17 @@ export const yo = cache(async (): Promise<Cuenta | null> => {
     //     el `console.error` de abajo no es decorativo: es el único lugar donde ese caso
     //     aparece, y hay que mirarlo.
     //
-    // ⏳ Cuando exista `Aviso` (paso 5), decidir si esto merece una banda de "no pudimos
-    // verificar tu sesión". Hoy no hay con qué dibujarla.
+    // ⏳ **`Aviso` ya existe (paso 4), así que el pendiente de D83 dejó de ser "no hay con
+    // qué dibujarla" y pasó a ser una decisión: por ahora, NO se dibuja** (D91). Tres razones,
+    // y la primera es la que manda: para saber que hubo un fallo —y no un visitante anónimo,
+    // que es el caso normal— esta función tendría que devolver algo más que `Cuenta | null`,
+    // y eso lo pagan sus cuatro llamadores para un estado que **se corrige solo** (cualquier
+    // acción protegida se come su `401` y va al login). Segunda: la banda caería sobre las
+    // páginas públicas que Next todavía puede servir de su caché, que es exactamente lo que
+    // esta degradación existe para proteger. Tercera: "no pudimos verificar tu sesión" no es
+    // accionable — no hay nada que el usuario pueda hacer con eso.
+    // **Se revisa en el paso 5**, que es cuando el fallo pasa a ser visible de verdad: con el
+    // feed escrito, un `yo()` caído le muestra la landing del visitante a alguien logueado.
     console.error("No se pudo resolver la sesión; se dibuja el armazón del visitante", error);
     return null;
   }

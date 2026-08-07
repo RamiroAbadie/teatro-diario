@@ -28,6 +28,25 @@ export function idDesdeSlug(slug: string): number | null {
   return /^[1-9]\d*$/.test(cabeza) ? Number(cabeza) : null;
 }
 
+/**
+ * El `?volver=` del login y del alta: **sólo rutas relativas del propio sitio** (D80).
+ * Cualquier otra cosa cae en la home, que es el destino por defecto.
+ *
+ * ⚠️ **Aceptar una URL absoluta es un redirect abierto**, y no alcanza con mirar que empiece
+ * con `/`: `//evil.com` es una URL **protocolo-relativa** —el navegador la resuelve como
+ * `https://evil.com`— y `/\evil.com` la tratan igual varios navegadores. Las tres formas se
+ * descartan de una exigiendo que arranque con una barra y que la segunda posición **no** sea
+ * ni barra ni contrabarra.
+ *
+ * Un link de login con `?volver=` apuntando afuera es la forma clásica de que el phishing
+ * salga desde nuestro dominio, con la sesión recién abierta y el usuario confiado.
+ */
+export function destinoDeVuelta(volver: string | null | undefined): string {
+  if (!volver || !volver.startsWith("/")) return "/";
+  if (volver.startsWith("//") || volver.startsWith("/\\")) return "/";
+  return volver;
+}
+
 /** Sin dependencias: el slug es decorativo, no tiene que ser reversible ni perfecto. */
 export function slugify(texto: string): string {
   return texto

@@ -1,6 +1,17 @@
 # Screen Specs
 
-> Estado: v1.3 — el paso 2 de la Fase 4 escribió **las pantallas 1, 3, 4, 5, 6 y 13** y este
+> Estado: v1.4 — el paso 4 de la Fase 4 escribió **las pantallas 7, 9, 10 y 11** y el CTA que le
+> faltaba a la 3. **Ninguna cambia de contenido ni de datos**, y este documento se corrige en
+> **dos** puntos, uno por cada decisión del paso:
+> **la escala de puntaje de la pantalla 9 es un control segmentado y no diez botones separados**
+> (D90) —en un celular de 360 quedan 328 px adentro de la hoja y diez objetivos **con
+> separación** no llegan a los 32 px de ancho que la entrada pedía; con los bordes compartidos
+> dan 31,9 px y el alto de 44 no se toca—, y **con sesión, el login y el alta redirigen al
+> `?volver=` y no a la home** (D91, en los estados de la pantalla 11).
+> Queda anotado, porque es de la 8 y de la 2 y no de la 9: **editar y borrar están escritos en
+> la hoja y todavía no tienen de dónde abrirse** — los menús de tres puntos son el paso 5.
+>
+> La v1.3 — el paso 2 de la Fase 4 escribió **las pantallas 1, 3, 4, 5, 6 y 13** y este
 > documento se corrige en dos puntos contra lo que se vio al dibujarlas: **la celda de la grilla
 > no repite el título** (D86, ver la pantalla 6) y **la placa de `og:image` ya tiene con qué
 > generarse** (D85, punto 2 de "lo que este documento deja anotado", ahora cerrado). Ninguna
@@ -632,9 +643,13 @@ home. **Sólo se aceptan rutas relativas del propio sitio** —un `?volver=https
 abierto—, y el gesto además recupera su borrador al llegar.
 
 **Estados**: *cargando* botón en "Creando cuenta…"/"Entrando…" · *error* los de arriba · *sin
-sesión* es su público; **con sesión, las dos redirigen a la home**: no se muestra un login a
-alguien que ya entró · el botón de salir **no tiene camino de error**: el logout responde `204`
-siempre, con sesión o sin ella (`API.md`).
+sesión* es su público; **con sesión, las dos redirigen** —no se muestra un login a alguien que ya
+entró— **y redirigen al `?volver=`, no a la home** (corregido en D91: acá decía "a la home", y era
+peor en el único caso donde esto pasa de verdad —una pestaña vieja apuntando al login mientras la
+sesión estaba viva, o el `401` de una acción protegida que se resolvió en otra pestaña—, porque
+tirar el destino que la propia URL trae es perder el "volver a donde estaba" que esta pantalla
+existe para cumplir. Sin `?volver=`, la home, que es lo que decía la regla) · el botón de salir
+**no tiene camino de error**: el logout responde `204` siempre, con sesión o sin ella (`API.md`).
 
 **Criterios**: HU-01 ✔ errores claros por campo y al completar quedás logueado y en la home ·
 HU-02 ✔ mensaje genérico · el visitante que llega por un link compartido y crea una cuenta **no se
