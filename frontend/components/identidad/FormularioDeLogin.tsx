@@ -62,7 +62,17 @@ export function FormularioDeLogin({ destino }: { destino: string }) {
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="mt-6 space-y-5">
+    <form
+      // ⚠️ **`method="post"` aunque el envío lo haga JavaScript.** Si el bundle todavía no
+      // hidrató —o falló—, el navegador envía el formulario **nativamente**, y un `form` sin
+      // método hace un `GET`: la contraseña termina en la URL, en el historial y en los logs
+      // de cualquier proxy. Con `post` no viaja en la URL. Encontrado probando la pantalla en
+      // un navegador de verdad, no leyendo el código.
+      method="post"
+      onSubmit={enviar}
+      noValidate
+      className="mt-6 space-y-5"
+    >
       {aviso && <Aviso variante="error">{aviso}</Aviso>}
 
       <Campo

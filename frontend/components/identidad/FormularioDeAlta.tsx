@@ -70,7 +70,14 @@ export function FormularioDeAlta({ destino }: { destino: string }) {
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="mt-6 space-y-5">
+    <form
+      // Ver `FormularioDeLogin`: sin hidratar, un `form` sin método manda los campos por la
+      // URL — acá, la contraseña recién elegida.
+      method="post"
+      onSubmit={enviar}
+      noValidate
+      className="mt-6 space-y-5"
+    >
       {aviso && <Aviso variante="error">{aviso}</Aviso>}
 
       <Campo

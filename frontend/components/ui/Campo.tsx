@@ -29,15 +29,22 @@ type Comunes = {
 
 type Props = Comunes & Omit<ComponentProps<"input">, "id" | "className">;
 
-/** Los inputs van en `text-base` (16 px) **siempre**: por debajo, iOS hace zoom al enfocar. */
+/**
+ * Los inputs van en `text-base` (16 px) **siempre**: por debajo, iOS hace zoom al enfocar.
+ *
+ * ⚠️ **El alto no está acá**: lo pone cada forma. Un `h-11` compartido y un `h-auto` que lo
+ * pise en el `textarea` serían dos utilidades del mismo `height` peleándose, y cuál gana lo
+ * decide el orden en el CSS generado, no el orden en el atributo `class`.
+ */
 const CONTROL =
-  "h-11 w-full rounded-md border bg-superficie px-3 text-base text-tinta " +
-  "placeholder:text-tinta-tenue";
+  "w-full rounded-md border bg-superficie px-3 text-base text-tinta placeholder:text-tinta-tenue";
 
 export function Campo({ id, etiqueta, error, ayuda, ...resto }: Props) {
   return (
     <Envoltorio id={id} etiqueta={etiqueta} error={error} ayuda={ayuda}>
-      {(clases, aria) => <input id={id} className={`${CONTROL} ${clases}`} {...aria} {...resto} />}
+      {(clases, aria) => (
+        <input id={id} className={`${CONTROL} h-11 ${clases}`} {...aria} {...resto} />
+      )}
     </Envoltorio>
   );
 }
@@ -59,7 +66,7 @@ export function CampoLargo({
       {(clases, aria) => (
         <textarea
           id={id}
-          className={`${CONTROL} h-auto py-2 ${clases}`}
+          className={`${CONTROL} py-2 ${clases}`}
           {...aria}
           {...resto}
         />

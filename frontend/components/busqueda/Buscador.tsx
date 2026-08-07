@@ -102,6 +102,12 @@ export function Buscador({ consultaInicial }: { consultaInicial: string }) {
           hace la diferencia parado en la vereda. */}
       <form
         role="search"
+        // ⚠️ Acá el envío nativo **es el que se quiere**: `action` y `method="get"` hacen que
+        // sin JavaScript el `Enter` navegue a `/buscar?q=…` y la pantalla se sirva desde el
+        // servidor con la búsqueda hecha. Con JavaScript no llega a pasar: ya buscamos
+        // mientras se escribe, así que el envío se cancela.
+        action="/buscar"
+        method="get"
         onSubmit={(e) => e.preventDefault()}
         className="mt-4 flex items-center gap-2"
       >

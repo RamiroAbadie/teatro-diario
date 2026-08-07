@@ -117,6 +117,39 @@ export type ReseniaDeFicha = {
 };
 
 /**
+ * El cuerpo del gesto (`POST /api/registros`, `PUT /api/registros/{id}`). **El mismo para
+ * crear y para editar**: editar reemplaza el gesto entero, incluida la producción, porque
+ * equivocarse de obra al elegirla del buscador es el error más probable.
+ *
+ * Sólo `produccionId` y `granularidad` son obligatorios, y con `SIN_FECHA` la `fecha` va en
+ * `null` (D59/MD-1).
+ */
+export type NuevoRegistro = {
+  produccionId: number;
+  fecha: string | null;
+  granularidad: Granularidad;
+  rating: number | null;
+  resenia: string | null;
+};
+
+/**
+ * La unidad que aparece en el diario, en el feed y en la respuesta del gesto.
+ *
+ * ⚠️ `enCatalogo: false` significa que el admin borró la ficha: **el título se muestra igual
+ * pero no se linkea** (D62). Es un caso a dibujar, no un error. **No trae `aficheUrl`** ni lo
+ * va a traer (D77): la fila del diario y del feed funciona tipográficamente.
+ */
+export type RegistroDeDiario = {
+  id: number;
+  produccion: { id: number; titulo: string; enCatalogo: boolean };
+  fecha: string | null;
+  granularidad: Granularidad;
+  rating: number | null;
+  resenia: string | null;
+  creadoEn: string;
+};
+
+/**
  * `GET /api/producciones/{id}/opiniones`. **Abierto pero personalizado**: con cookie agrega
  * `leDiLike` en cada reseña y `vecesQueLaVi` — por eso lo pide `apiPublic` o `apiSession`
  * según la llamada, y nunca se cachea una respuesta pedida con cookie (D78).

@@ -123,7 +123,7 @@ export function FormularioDeSugerencia({ tituloInicial }: { tituloInicial: strin
   }
 
   return (
-    <form onSubmit={enviar} noValidate className="mt-6 space-y-5">
+    <form method="post" onSubmit={enviar} noValidate className="mt-6 space-y-5">
       {aviso && <Aviso variante="error">{aviso}</Aviso>}
 
       <Campo
