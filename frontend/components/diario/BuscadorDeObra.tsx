@@ -100,7 +100,26 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   const cantidadDeOpciones = resultados.length + 1;
   const indiceDeSugerir = resultados.length;
 
+  /**
+   * ⚠️ **La lista no es la del texto que está escrito ahora.** Son **dos** ventanas y no una,
+   * y la primera es la que importa porque ahí el dedo se está moviendo:
+   *
+   * 1. **La espera de los 250 ms**: `texto` ya cambió y `consulta` todavía no salió.
+   * 2. **El pedido en vuelo**: `consulta` salió y la respuesta no llegó (`buscando`).
+   *
+   * Mirar sólo la segunda —que es lo que hacía la primera versión— deja sin marcar justo el
+   * momento en que alguien tipea rápido y aprieta `Enter`.
+   */
+  const desactualizada = texto.trim() !== consulta || buscando;
+
   function elegirActivo() {
+    // ⚠️ **`Enter` con la lista desactualizada no elige: adelanta la búsqueda.** Es el único
+    // camino en el que la persona **no apuntó a una fila** —está confiando en "el primero"—,
+    // así que es el único donde una lista vieja puede registrar la obra equivocada: escribir
+    // "mac" sobre "ham" y apretar `Enter` antes de los 250 ms elegía Hamlet. Un clic o un
+    // toque sí eligen igual, porque ahí se apuntó a algo que está a la vista.
+    if (desactualizada) return setConsulta(texto.trim());
+
     if (activo === indiceDeSugerir) return onSugerir(texto.trim());
     const elegida = resultados[activo];
     if (elegida) onElegir({ id: elegida.id, titulo: elegida.titulo });
@@ -158,8 +177,10 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
         />
 
         {/* El estado *cargando* del autocompletado: **no bloquea lo tipeado**. Es un punto
-            que late, sin animación de giro, para no chocar con `prefers-reduced-motion`. */}
-        {buscando && (
+            que late, sin animación de giro, para no chocar con `prefers-reduced-motion`.
+            Aparece con la lista desactualizada y no sólo con el pedido en vuelo: las dos
+            ventanas se ven igual desde afuera. */}
+        {desactualizada && (
           <span
             aria-hidden
             className="absolute top-1/2 right-3 size-2 -translate-y-1/2 rounded-full bg-acento"
@@ -173,24 +194,25 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
         <>
           {/* Cuántos hay se anuncia, no se deduce del silencio. */}
           <p aria-live="polite" className="sr-only">
-            {buscando
+            {desactualizada
               ? "Buscando"
               : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"}`}
           </p>
 
-          {/* ⚠️ **La lista anterior se queda mientras llega la nueva, y se atenúa.** Vaciarla
-              en cada consulta haría que la lista parpadee a vacío en cada pausa de tipeo, que
-              es lo contrario de los seis toques de P8. Lo que sí hay que evitar es que una
-              lista vieja se lea como si fuera la nueva: la opacidad lo dice, el `aria-live`
-              anuncia "Buscando", y lo que se elige es **siempre lo que está a la vista** — con
-              la obra elegida en el campo y un "Cambiar" al lado antes de publicar. */}
+          {/* ⚠️ **La lista anterior se queda mientras se escribe la nueva, y se atenúa desde
+              la primera tecla** (ver `desactualizada`). Vaciarla en cada consulta la haría
+              parpadear a vacío en cada pausa de tipeo, que es lo contrario de los seis toques
+              de P8; lo que no puede pasar es que una lista vieja **se lea como si fuera la
+              nueva**, y eso lo dicen la opacidad, el punto del campo y el `aria-live`. Elegir
+              con el dedo sigue siendo elegir lo que está a la vista; el `Enter` a ciegas es el
+              que espera a la lista nueva. */}
           <ul
             id={`${idBase}-opciones`}
             role="listbox"
             aria-label="Producciones"
             className={
               "mt-2 max-h-64 overflow-y-auto rounded-md border border-borde transition-opacity duration-150 " +
-              (buscando ? "opacity-60" : "")
+              (desactualizada ? "opacity-60" : "")
             }
           >
             {resultados.map((produccion, i) => (

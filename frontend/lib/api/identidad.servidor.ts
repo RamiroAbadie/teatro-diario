@@ -63,7 +63,7 @@ export const yo = cache(async (): Promise<Cuenta | null> => {
     //     aparece, y hay que mirarlo.
     //
     // ⏳ **`Aviso` ya existe (paso 4), así que el pendiente de D83 dejó de ser "no hay con
-    // qué dibujarla" y pasó a ser una decisión: por ahora, NO se dibuja** (D90). Tres razones,
+    // qué dibujarla" y pasó a ser una decisión: por ahora, NO se dibuja** (D91). Tres razones,
     // y la primera es la que manda: para saber que hubo un fallo —y no un visitante anónimo,
     // que es el caso normal— esta función tendría que devolver algo más que `Cuenta | null`,
     // y eso lo pagan sus cuatro llamadores para un estado que **se corrige solo** (cualquier

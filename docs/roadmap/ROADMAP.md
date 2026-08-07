@@ -202,9 +202,14 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    ahora dibuja los tres estados de `vecesQueLaVi` (D76). Entran `Aviso` (ui/9),
    `Confirmacion` (ui/10) —con lo que **los diez de `DESIGN_SYSTEM.md` están completos**—,
    `Campo`/`CampoLargo`, `usarBorrador`, la escala 1-10 de `components/diario/` y los tres
-   clientes de navegador que faltaban. Decisión que hizo falta: **D90**, que además recoge
-   **cuatro defectos que el paso encontró**, uno de ellos con el navegador y no leyendo:
-   **sin hidratar, un formulario sin `method` mandaba la contraseña en la URL**.
+   clientes de navegador que faltaban. Decisiones que hicieron falta: **D90**, que recoge
+   **cuatro defectos que el paso encontró**, uno de ellos con el navegador y no leyendo —**sin
+   hidratar, un formulario sin `method` mandaba la contraseña en la URL**—, y **D91**, que es
+   lo que encontró la auditoría: **tres defectos más, los tres con la misma forma —un efecto
+   corriendo detrás de otro—**, empezando por el borrador que no se borraba al publicar y
+   dejaba el gesto siguiente con la fecha de ayer. D91 cierra además el pendiente que D83
+   había dejado (la banda de "no pudimos verificar tu sesión": por ahora no se dibuja, y se
+   revisa en el paso 5) y corrige `SCREEN_SPECS.md` en el retorno por `?volver=`.
    ⚠️ **Lo que este paso deja anotado y no resuelve**: **editar y borrar (HU-11) no tienen
    punto de entrada todavía** —los menús de tres puntos del diario y del feed son el paso 5,
    así que lo único que se probó de esa mitad es el contrato— y **el borrador que sobrevive al
