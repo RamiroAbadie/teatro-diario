@@ -18,14 +18,16 @@ import type { ComponentProps, ReactNode } from "react";
  * mensaje sin leer.
  */
 
-type Props = {
+type Comunes = {
   id: string;
   etiqueta: string;
   /** El mensaje del `400` con `errores`, o el de la validación previa del cliente. */
   error?: string;
   /** La línea tenue de abajo: la advertencia del username, el contador de la contraseña. */
   ayuda?: ReactNode;
-} & Omit<ComponentProps<"input">, "id" | "className">;
+};
+
+type Props = Comunes & Omit<ComponentProps<"input">, "id" | "className">;
 
 /** Los inputs van en `text-base` (16 px) **siempre**: por debajo, iOS hace zoom al enfocar. */
 const CONTROL =
@@ -33,6 +35,52 @@ const CONTROL =
   "placeholder:text-tinta-tenue";
 
 export function Campo({ id, etiqueta, error, ayuda, ...resto }: Props) {
+  return (
+    <Envoltorio id={id} etiqueta={etiqueta} error={error} ayuda={ayuda}>
+      {(clases, aria) => <input id={id} className={`${CONTROL} ${clases}`} {...aria} {...resto} />}
+    </Envoltorio>
+  );
+}
+
+/**
+ * La misma etiqueta y el mismo error, con un `textarea`: la reseña del gesto y el elenco y el
+ * comentario de la sugerencia. **El alto lo pone quien lo usa** (`rows`): una reseña y un
+ * "si te acordás, ayuda" no son el mismo campo.
+ */
+export function CampoLargo({
+  id,
+  etiqueta,
+  error,
+  ayuda,
+  ...resto
+}: Comunes & Omit<ComponentProps<"textarea">, "id" | "className">) {
+  return (
+    <Envoltorio id={id} etiqueta={etiqueta} error={error} ayuda={ayuda}>
+      {(clases, aria) => (
+        <textarea
+          id={id}
+          className={`${CONTROL} h-auto py-2 ${clases}`}
+          {...aria}
+          {...resto}
+        />
+      )}
+    </Envoltorio>
+  );
+}
+
+/** Lo que las dos formas comparten, escrito una sola vez. */
+function Envoltorio({
+  id,
+  etiqueta,
+  error,
+  ayuda,
+  children,
+}: Comunes & {
+  children: (
+    clases: string,
+    aria: { "aria-invalid"?: true; "aria-describedby"?: string },
+  ) => ReactNode;
+}) {
   const idAyuda = ayuda ? `${id}-ayuda` : null;
   const idError = error ? `${id}-error` : null;
   const descrito = [idAyuda, idError].filter(Boolean).join(" ");
@@ -43,13 +91,10 @@ export function Campo({ id, etiqueta, error, ayuda, ...resto }: Props) {
         {etiqueta}
       </label>
 
-      <input
-        id={id}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={descrito || undefined}
-        className={`${CONTROL} mt-1 ${error ? "border-peligro" : "border-borde-control"}`}
-        {...resto}
-      />
+      {children(`mt-1 ${error ? "border-peligro" : "border-borde-control"}`, {
+        ...(error ? { "aria-invalid": true as const } : {}),
+        ...(descrito ? { "aria-describedby": descrito } : {}),
+      })}
 
       {ayuda && (
         <p id={idAyuda!} className="mt-1 text-sm text-tinta-tenue">

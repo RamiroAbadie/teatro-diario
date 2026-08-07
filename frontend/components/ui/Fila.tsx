@@ -51,6 +51,27 @@ export function FilaResultado({
 }
 
 /**
+ * El estado **cargando** de la lista: barras con **el alto final de la fila**, para que
+ * cuando lleguen los resultados la lista no salte. **Sin animación de brillo**: una animación
+ * infinita choca con `prefers-reduced-motion` y no aporta nada (D79).
+ */
+export function FilasEnEsqueleto({ cantidad = 3 }: { cantidad?: number }) {
+  return (
+    <ul aria-hidden>
+      {Array.from({ length: cantidad }, (_, i) => (
+        <li key={i} className="flex items-center gap-3 border-t border-borde py-3">
+          <span className="h-14 w-9 shrink-0 rounded-md bg-borde" />
+          <span className="flex-1 space-y-2">
+            <span className="block h-4 w-2/3 rounded bg-borde" />
+            <span className="block h-3 w-1/3 rounded bg-borde" />
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/**
  * `feed`: la firma de quien escribe, la fecha difusa, el puntaje y la reseña. En la ficha va
  * **sin el título de la obra** —ya estamos en ella— y por eso `titulo` es opcional.
  *

@@ -1,7 +1,7 @@
 "use client";
 
-import { apiMutar } from "./client";
-import type { Cuenta } from "./tipos";
+import { apiGet, apiMutar } from "./client";
+import type { Cuenta, UsuarioResultado } from "./tipos";
 
 /**
  * Identidad, **lado navegador**: las mutaciones. Ver `identidad.servidor.ts` para por qué
@@ -11,6 +11,14 @@ import type { Cuenta } from "./tipos";
  * mutación, así que ninguna pantalla tiene que acordarse. Lo que sí importa: una pantalla
  * **no puede encadenar una segunda mutación asumiendo el token viejo**.
  */
+
+/**
+ * La tercera sección de la pantalla de búsqueda (HU-07/D23). **La sirve Identidad y no
+ * Catálogo**, porque cada módulo busca sobre lo suyo (D65): son tres endpoints
+ * independientes que comparten prefijo de URL, y la URL no es un límite de módulo.
+ */
+export const buscarUsuarios = (q: string) =>
+  apiGet<UsuarioResultado[]>(`/api/buscar/usuarios?q=${encodeURIComponent(q)}`);
 
 /** HU-01: el alta **deja la sesión abierta**, así que no hay que loguear después. */
 export async function registro(datos: {

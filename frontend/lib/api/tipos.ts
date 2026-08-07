@@ -47,6 +47,31 @@ export type ProduccionResumen = {
 
 export type Participacion = { id: number; persona: Persona; rol: RolParticipacion };
 
+/**
+ * Lo que devuelve `GET /api/buscar/usuarios` (D65). **Las salas no se buscan** (D23): se
+ * navegan desde las fichas, así que no hay un tipo para eso y no falta.
+ */
+export type UsuarioResultado = { id: number; username: string; creadoEn: string };
+
+/**
+ * `POST /api/sugerencias` (HU-08, D69). **Sólo el título es obligatorio**, y `sala` y
+ * `elenco` son texto libre y no ids del catálogo: quien sugiere no sabe si existen.
+ */
+export type NuevaSugerencia = {
+  titulo: string;
+  sala: string | null;
+  anio: number | null;
+  elenco: string | null;
+  comentario: string | null;
+};
+
+/**
+ * La respuesta del `201`, que **es** la confirmación de recibido: lo propuesto, devuelto tal
+ * cual entró. Sin estado adentro, y no es un olvido — no hay nada que consultar después
+ * (MD-3), y por eso la pantalla de acuse dibuja esto y no un "pendiente".
+ */
+export type SugerenciaRecibida = NuevaSugerencia & { id: number };
+
 /** `GET /api/producciones/{id}`. **No trae promedio ni reseñas**: eso es Diario (D60). */
 export type Ficha = {
   id: number;
