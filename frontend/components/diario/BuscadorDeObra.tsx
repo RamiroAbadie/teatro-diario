@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { ChipDeEstado } from "@/components/ui/Chip";
 import { buscarProducciones } from "@/lib/api/catalogo.cliente";
@@ -40,17 +40,18 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
    * ⚠️ **La lista viaja con la consulta de la que salió, y eso es la corrección entera.**
    * Antes eran dos estados sueltos —`resultados` por un lado, un `buscando` por otro— y la
    * vigencia se calculaba comparando el texto contra `consulta`, que es **la pregunta**, no
-   * **la respuesta que está en pantalla**. Entre las dos hay un tercer hueco que no se ve
-   * leyendo: cuando el temporizador dispara `setConsulta(nuevo)`, React pinta un cuadro con
-   * `texto === consulta`, `buscando` todavía en `false` y `items` **todavía de la consulta
-   * anterior** — el `setBuscando(true)` está adentro del efecto, y un efecto que no nace de
-   * una interacción corre **después** de ese pintado. En ese cuadro la lista recuperaba la
-   * opacidad y `Enter` volvía a elegir sobre resultados viejos.
+   * **la respuesta que está en pantalla**. Con eso, el modelo **permitía** un render con
+   * `texto === consulta`, `buscando` todavía en `false` e `items` de la consulta anterior: el
+   * `setBuscando(true)` vivía adentro del efecto, y **React no promete** que un efecto que no
+   * nace de una interacción corra antes del pintado o antes del evento siguiente. Ese render
+   * **no se llegó a observar en Chromium** —ver D91: ni el muestreo cuadro por cuadro ni el
+   * barrido de `Enter` lo expusieron—, pero que hoy no aparezca depende de un orden que nadie
+   * garantiza, y una regla que se cumple por casualidad no es una regla.
    *
-   * Atando los dos datos en un solo estado, el invariante deja de depender del orden en que
-   * corren los efectos y pasa a ser estructural: **no existe un render donde los ítems sean
-   * de A y `lista.consulta` diga B**, porque se escriben juntos. `buscando` desaparece: era
-   * una forma indirecta y con retraso de preguntar lo mismo.
+   * Atando los dos datos en un solo estado, el invariante deja de depender de ese orden y
+   * pasa a ser estructural: **no existe un render donde los ítems sean de A y `lista.consulta`
+   * diga B**, porque se escriben juntos. `buscando` desaparece: era una forma indirecta y con
+   * retraso de preguntar lo mismo.
    */
   const [lista, setLista] = useState<{ consulta: string; items: ProduccionResumen[] }>({
     consulta: "",
@@ -60,15 +61,28 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   const ultima = useRef(0);
   const campo = useRef<HTMLInputElement>(null);
 
+  /**
+   * ⚠️ **La lista y el resaltado se escriben juntos, por el mismo motivo que los ítems y su
+   * consulta.** El índice vive aparte del arreglo que indexa, así que si se lo deja atrás
+   * termina apuntando a una opción que ya no existe: con diez resultados en pantalla, una
+   * flecha durante el pedido lo lleva a 10, y si la respuesta nueva trae uno solo, ese 10 no
+   * es nada — `aria-activedescendant` anuncia un id inexistente y `Enter` no hace nada, que
+   * es justo lo que "flechas y Enter navegan" (`SCREEN_SPECS.md`) promete que no pasa.
+   * Una lista nueva empieza siempre por arriba.
+   */
+  const mostrar = useCallback((nueva: { consulta: string; items: ProduccionResumen[] }) => {
+    setLista(nueva);
+    setActivo(0);
+  }, []);
+
   useEffect(() => {
     const t = setTimeout(() => setConsulta(texto.trim()), ESPERA);
     return () => clearTimeout(t);
   }, [texto]);
 
   useEffect(() => {
-    setActivo(0);
     if (consulta.length < MINIMO) {
-      setLista({ consulta, items: [] });
+      mostrar({ consulta, items: [] });
       return;
     }
 
@@ -76,15 +90,15 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
     buscarProducciones(consulta)
       .then((items) => {
         if (pedido !== ultima.current) return; // una respuesta vieja no pisa a la nueva
-        setLista({ consulta, items });
+        mostrar({ consulta, items });
       })
       .catch(() => {
         if (pedido !== ultima.current) return;
         // ⚠️ Un fallo de la búsqueda **no rompe el gesto y no muestra una pantalla de
         // error**: la opción de sugerir sigue estando, que es la salida que importa.
-        setLista({ consulta, items: [] });
+        mostrar({ consulta, items: [] });
       });
-  }, [consulta]);
+  }, [consulta, mostrar]);
 
   const resultados = lista.items;
 
@@ -117,6 +131,15 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   const indiceDeSugerir = resultados.length;
 
   /**
+   * ⚠️ **La red de contención, y va además del `mostrar` de arriba.** Aquél mantiene el
+   * resaltado en su lugar cuando la lista cambia; esto garantiza que **ningún render pueda
+   * nombrar una opción que no existe**, pase lo que pase con el orden de las actualizaciones.
+   * Es la misma elección que en el resto de este componente: preferir un invariante que se
+   * cumple por construcción antes que uno que depende de cuándo corre cada cosa.
+   */
+  const activoSeguro = Math.min(activo, indiceDeSugerir);
+
+  /**
    * ⚠️ **"Lo que está en la lista no es lo que dice el campo".** Una sola comparación, contra
    * **la consulta de la que salieron los ítems**, y por eso cubre las **tres** ventanas sin
    * enumerarlas: la espera de los 250 ms, el pedido en vuelo, y el cuadro que hay entre las
@@ -133,8 +156,8 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
     // toque sí eligen igual, porque ahí se apuntó a algo que está a la vista.
     if (desactualizada) return setConsulta(texto.trim());
 
-    if (activo === indiceDeSugerir) return onSugerir(texto.trim());
-    const elegida = resultados[activo];
+    if (activoSeguro === indiceDeSugerir) return onSugerir(texto.trim());
+    const elegida = resultados[activoSeguro];
     if (elegida) onElegir({ id: elegida.id, titulo: elegida.titulo });
   }
 
@@ -153,7 +176,7 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
           aria-expanded={consulta.length >= MINIMO}
           aria-controls={`${idBase}-opciones`}
           aria-activedescendant={
-            consulta.length >= MINIMO ? `${idBase}-opcion-${activo}` : undefined
+            consulta.length >= MINIMO ? `${idBase}-opcion-${activoSeguro}` : undefined
           }
           aria-autocomplete="list"
           autoComplete="off"
@@ -164,10 +187,10 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
             if (consulta.length < MINIMO) return;
             if (evento.key === "ArrowDown") {
               evento.preventDefault();
-              setActivo((i) => (i + 1) % cantidadDeOpciones);
+              setActivo((activoSeguro + 1) % cantidadDeOpciones);
             } else if (evento.key === "ArrowUp") {
               evento.preventDefault();
-              setActivo((i) => (i - 1 + cantidadDeOpciones) % cantidadDeOpciones);
+              setActivo((activoSeguro - 1 + cantidadDeOpciones) % cantidadDeOpciones);
             } else if (evento.key === "Enter") {
               // El `Enter` de la lista elige una opción y **no envía el formulario**.
               evento.preventDefault();
@@ -213,12 +236,13 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
           </p>
 
           {/* ⚠️ **La lista anterior se queda mientras se escribe la nueva, y se atenúa desde
-              la primera tecla** (ver `desactualizada`). Vaciarla en cada consulta la haría
-              parpadear a vacío en cada pausa de tipeo, que es lo contrario de los seis toques
-              de P8; lo que no puede pasar es que una lista vieja **se lea como si fuera la
-              nueva**, y eso lo dicen la opacidad, el punto del campo y el `aria-live`. Elegir
-              con el dedo sigue siendo elegir lo que está a la vista; el `Enter` a ciegas es el
-              que espera a la lista nueva. */}
+              la primera tecla** (ver `desactualizada`, que es una sola comparación y por eso
+              no hay ventanas que enumerar). Vaciarla en cada consulta la haría parpadear a
+              vacío en cada pausa de tipeo, que es lo contrario de los seis toques de P8; lo
+              que no puede pasar es que una lista vieja **se lea como si fuera la nueva**, y
+              eso lo dicen la opacidad, el punto del campo y el `aria-live`. Elegir con el dedo
+              sigue siendo elegir lo que está a la vista; el `Enter` a ciegas es el que espera
+              a la lista nueva. */}
           <ul
             id={`${idBase}-opciones`}
             role="listbox"
@@ -233,7 +257,7 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
                 key={produccion.id}
                 id={`${idBase}-opcion-${i}`}
                 role="option"
-                aria-selected={activo === i}
+                aria-selected={activoSeguro === i}
               >
                 <button
                   type="button"
@@ -241,7 +265,7 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
                   onClick={() => onElegir({ id: produccion.id, titulo: produccion.titulo })}
                   className={
                     "flex w-full items-center gap-2 border-b border-borde px-3 py-2 text-left " +
-                    (activo === i ? "bg-acento-suave" : "")
+                    (activoSeguro === i ? "bg-acento-suave" : "")
                   }
                 >
                   <span className="min-w-0 flex-1">
@@ -260,7 +284,7 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
             <li
               id={`${idBase}-opcion-${indiceDeSugerir}`}
               role="option"
-              aria-selected={activo === indiceDeSugerir}
+              aria-selected={activoSeguro === indiceDeSugerir}
             >
               <button
                 type="button"
@@ -268,7 +292,7 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
                 onClick={() => onSugerir(texto.trim())}
                 className={
                   "w-full px-3 py-3 text-left text-sm text-acento-tinta " +
-                  (activo === indiceDeSugerir ? "bg-acento-suave" : "")
+                  (activoSeguro === indiceDeSugerir ? "bg-acento-suave" : "")
                 }
               >
                 No está en el catálogo → sugerirla
