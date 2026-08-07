@@ -56,16 +56,27 @@ export function FormularioDeSugerencia({ tituloInicial }: { tituloInicial: strin
   const [errores, setErrores] = useState<Record<string, string>>({});
   const [recibida, setRecibida] = useState<SugerenciaRecibida | null>(null);
 
-  // ⚠️ **Un borrador viejo no puede secuestrar una sugerencia nueva.** Si se llega desde la
-  // búsqueda con un título distinto del que dejó el borrador, gana el de la URL: es la
-  // intención de ahora. Si es el mismo —el caso de volver del login—, manda el borrador, que
-  // es lo último que la persona escribió.
+  // ⚠️ **Un borrador viejo no puede secuestrar una sugerencia nueva, y eso es el formulario
+  // ENTERO y no sólo el título.** Si se llega desde la búsqueda con un título distinto del
+  // que dejó el borrador, se empieza de cero: es otra obra. Pisar sólo el título dejaba la
+  // sala, el año y el elenco de la anterior, y eso se manda **sin que nadie lo note** — el
+  // admin recibiría "Macbeth" con la sala de "Hamlet", que es peor que no recibir nada,
+  // porque el catálogo cerrado (D7) existe justamente para que el dato sea confiable.
+  // Si el título es el mismo —el caso de volver del login—, manda el borrador, que es lo
+  // último que la persona escribió.
   useEffect(() => {
     if (!tituloInicial) return;
     setValor((actual) =>
       actual.semilla === tituloInicial
         ? actual
-        : { ...actual, semilla: tituloInicial, titulo: tituloInicial },
+        : {
+            semilla: tituloInicial,
+            titulo: tituloInicial,
+            sala: "",
+            anio: "",
+            elenco: "",
+            comentario: "",
+          },
     );
   }, [tituloInicial, setValor]);
 

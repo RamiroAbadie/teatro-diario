@@ -67,6 +67,19 @@ const vacio = (): Formulario => ({
   resenia: "",
 });
 
+/**
+ * "No hay nada escrito acá": ni obra, ni puntaje, ni reseña, ni una precisión de fecha
+ * distinta de la que viene por defecto — y no es una edición. Es lo que separa **un borrador**
+ * de **el estado inicial**, y lo único que se pierde al recalcular es una fecha elegida a mano
+ * en un formulario por lo demás vacío, que además se ve en el campo apenas se abre.
+ */
+const estaEnBlanco = (f: Formulario): boolean =>
+  f.registroId === null &&
+  f.obra === null &&
+  f.rating === null &&
+  f.resenia.trim() === "" &&
+  f.granularidad === "DIA";
+
 const desdeRegistro = (registro: RegistroDeDiario): Formulario => ({
   registroId: registro.id,
   obra: { id: registro.produccion.id, titulo: registro.produccion.titulo },
@@ -120,6 +133,13 @@ export function HojaDelGesto() {
         // viejo cuando la persona creía estar cargando uno.
         setValor((actual) => (actual.registroId === null ? actual : vacio()));
       }
+
+      // ⚠️ **"Hoy por defecto" se calcula al abrir y no al montar.** Un formulario en el que
+      // no hay nada escrito no es "lo tipeado": es el estado inicial, y el estado inicial de
+      // la fecha es hoy. Sin esto, una pestaña abierta desde ayer —o un borrador vacío
+      // guardado ayer— ofrece la fecha de ayer con la misma cara con que ofrece la de hoy, y
+      // la promesa de "un toque" pasa a registrar la función equivocada en silencio.
+      setValor((actual) => (estaEnBlanco(actual) ? vacio() : actual));
 
       abrir();
     };
@@ -215,6 +235,13 @@ export function HojaDelGesto() {
       confirmacion.cerrar();
       cerrarLimpiando();
     } catch (error) {
+      // La sesión venció mientras la confirmación estaba abierta: el manejador global manda
+      // al login, y esto es lo que hace que al volver la hoja se reabra con el registro que
+      // se estaba por borrar. Sin la marca, la persona vuelve a una pantalla cualquiera y
+      // tiene que rehacer todo el camino hasta el registro.
+      if (error instanceof FalloDeApi && error.status === 401) {
+        sessionStorage.setItem(INTERRUMPIDA, "1");
+      }
       // El error se queda **adentro del diálogo y el diálogo no se cierra**: cerrarlo dejaría
       // al usuario sin saber si el registro se borró o no.
       setErrorAlBorrar(comoFormulario(error).general ?? "No pudimos borrar el registro.");

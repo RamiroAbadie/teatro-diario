@@ -32,7 +32,9 @@ export function Cabecera({ cuenta }: { cuenta: Cuenta | null }) {
 
         {/* ≥md: el buscador desplegado. Es un `form` de verdad, así que funciona sin
             JavaScript y no necesita ser una isla cliente. */}
-        <form action="/buscar" className="ml-4 hidden flex-1 md:block">
+        {/* `method="get"` explícito: el envío nativo es el que se quiere, y D90 pide que
+            todo formulario declare el suyo en vez de confiar en el default. */}
+        <form action="/buscar" method="get" className="ml-4 hidden flex-1 md:block">
           <label htmlFor="q-cabecera" className="sr-only">
             Buscar obras, artistas y usuarios
           </label>

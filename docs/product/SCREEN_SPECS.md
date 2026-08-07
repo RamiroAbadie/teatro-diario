@@ -641,9 +641,13 @@ home. **Sólo se aceptan rutas relativas del propio sitio** —un `?volver=https
 abierto—, y el gesto además recupera su borrador al llegar.
 
 **Estados**: *cargando* botón en "Creando cuenta…"/"Entrando…" · *error* los de arriba · *sin
-sesión* es su público; **con sesión, las dos redirigen a la home**: no se muestra un login a
-alguien que ya entró · el botón de salir **no tiene camino de error**: el logout responde `204`
-siempre, con sesión o sin ella (`API.md`).
+sesión* es su público; **con sesión, las dos redirigen** —no se muestra un login a alguien que ya
+entró— **y redirigen al `?volver=`, no a la home** (corregido en D90: acá decía "a la home", y era
+peor en el único caso donde esto pasa de verdad —una pestaña vieja apuntando al login mientras la
+sesión estaba viva, o el `401` de una acción protegida que se resolvió en otra pestaña—, porque
+tirar el destino que la propia URL trae es perder el "volver a donde estaba" que esta pantalla
+existe para cumplir. Sin `?volver=`, la home, que es lo que decía la regla) · el botón de salir
+**no tiene camino de error**: el logout responde `204` siempre, con sesión o sin ella (`API.md`).
 
 **Criterios**: HU-01 ✔ errores claros por campo y al completar quedás logueado y en la home ·
 HU-02 ✔ mensaje genérico · el visitante que llega por un link compartido y crea una cuenta **no se

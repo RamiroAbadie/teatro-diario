@@ -153,6 +153,8 @@ function validar(
   // regular ambiciosa acá sólo sirve para rechazar direcciones válidas y raras.
   if (!/^\S+@\S+\.\S+$/.test(email)) {
     errores.email = "El email no tiene un formato válido";
+  } else if (email.length > 254) {
+    errores.email = "El email no puede superar los 254 caracteres";
   }
   if (password.length < 8 || password.length > 72) {
     errores.password = "La contraseña necesita entre 8 y 72 caracteres";

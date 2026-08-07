@@ -22,6 +22,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export function usarBorrador<T extends object>(clave: string, inicial: T) {
   const [valor, setValor] = useState<T>(inicial);
   const primerRender = useRef(true);
+  /**
+   * ⚠️ **Lo que hace que `olvidar()` realmente olvide.** Quien publica hace dos cosas
+   * seguidas —olvidar y vaciar el formulario—, y el vaciado es un cambio de estado como
+   * cualquier otro: el efecto de abajo corría detrás y **volvía a guardar el borrador que se
+   * acababa de borrar**. Medido en el navegador: después de publicar, `sessionStorage` tenía
+   * un borrador vacío con la fecha del día en que se publicó. Con esto, la escritura que
+   * sigue a un `olvidar()` se saltea, y la siguiente tecla del usuario vuelve a guardar.
+   */
+  const omitirProximaEscritura = useRef(false);
 
   useEffect(() => {
     const guardado = sessionStorage.getItem(clave);
@@ -46,11 +55,18 @@ export function usarBorrador<T extends object>(clave: string, inicial: T) {
       primerRender.current = false;
       return;
     }
+    if (omitirProximaEscritura.current) {
+      omitirProximaEscritura.current = false;
+      return;
+    }
     sessionStorage.setItem(clave, JSON.stringify(valor));
   }, [clave, valor]);
 
   /** Al publicar con éxito: lo que ya se envió no es un borrador. */
-  const olvidar = useCallback(() => sessionStorage.removeItem(clave), [clave]);
+  const olvidar = useCallback(() => {
+    omitirProximaEscritura.current = true;
+    sessionStorage.removeItem(clave);
+  }, [clave]);
 
   return { valor, setValor, olvidar };
 }

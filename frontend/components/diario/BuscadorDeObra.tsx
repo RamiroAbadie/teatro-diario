@@ -178,11 +178,20 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
               : `${resultados.length} ${resultados.length === 1 ? "resultado" : "resultados"}`}
           </p>
 
+          {/* ⚠️ **La lista anterior se queda mientras llega la nueva, y se atenúa.** Vaciarla
+              en cada consulta haría que la lista parpadee a vacío en cada pausa de tipeo, que
+              es lo contrario de los seis toques de P8. Lo que sí hay que evitar es que una
+              lista vieja se lea como si fuera la nueva: la opacidad lo dice, el `aria-live`
+              anuncia "Buscando", y lo que se elige es **siempre lo que está a la vista** — con
+              la obra elegida en el campo y un "Cambiar" al lado antes de publicar. */}
           <ul
             id={`${idBase}-opciones`}
             role="listbox"
             aria-label="Producciones"
-            className="mt-2 max-h-64 overflow-y-auto rounded-md border border-borde"
+            className={
+              "mt-2 max-h-64 overflow-y-auto rounded-md border border-borde transition-opacity duration-150 " +
+              (buscando ? "opacity-60" : "")
+            }
           >
             {resultados.map((produccion, i) => (
               <li

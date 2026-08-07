@@ -54,7 +54,7 @@ export function EstadoVacio({ titulo, children, accion, conBuscador = false, niv
  */
 function BuscadorEmbebido() {
   return (
-    <form action="/buscar" className="mx-auto mt-6 flex max-w-sm items-center gap-2">
+    <form action="/buscar" method="get" className="mx-auto mt-6 flex max-w-sm items-center gap-2">
       <label htmlFor="q-vacio" className="sr-only">
         Buscar obras, artistas y usuarios
       </label>
