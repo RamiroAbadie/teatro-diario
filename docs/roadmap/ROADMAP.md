@@ -205,8 +205,8 @@ cosa nueva** — en el backend eso era MODULE_MAP + las capas de D51; acá hay q
    clientes de navegador que faltaban. Decisiones que hicieron falta: **D90**, que recoge
    **cuatro defectos que el paso encontró**, uno de ellos con el navegador y no leyendo —**sin
    hidratar, un formulario sin `method` mandaba la contraseña en la URL**—, y **D91**, que es
-   lo que encontró la auditoría: **tres defectos más, los tres con la misma forma —un efecto
-   corriendo detrás de otro—**, empezando por el borrador que no se borraba al publicar y
+   lo que encontraron la auditoría y la re-auditoría: **cuatro defectos más, todos con la misma
+   forma —un efecto corriendo detrás de otro—**, empezando por el borrador que no se borraba al publicar y
    dejaba el gesto siguiente con la fecha de ayer. D91 cierra además el pendiente que D83
    había dejado (la banda de "no pudimos verificar tu sesión": por ahora no se dibuja, y se
    revisa en el paso 5) y corrige `SCREEN_SPECS.md` en el retorno por `?volver=`.

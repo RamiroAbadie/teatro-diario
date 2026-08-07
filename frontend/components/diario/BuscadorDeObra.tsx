@@ -36,8 +36,26 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   const idBase = useId();
   const [texto, setTexto] = useState("");
   const [consulta, setConsulta] = useState("");
-  const [resultados, setResultados] = useState<ProduccionResumen[]>([]);
-  const [buscando, setBuscando] = useState(false);
+  /**
+   * ⚠️ **La lista viaja con la consulta de la que salió, y eso es la corrección entera.**
+   * Antes eran dos estados sueltos —`resultados` por un lado, un `buscando` por otro— y la
+   * vigencia se calculaba comparando el texto contra `consulta`, que es **la pregunta**, no
+   * **la respuesta que está en pantalla**. Entre las dos hay un tercer hueco que no se ve
+   * leyendo: cuando el temporizador dispara `setConsulta(nuevo)`, React pinta un cuadro con
+   * `texto === consulta`, `buscando` todavía en `false` y `items` **todavía de la consulta
+   * anterior** — el `setBuscando(true)` está adentro del efecto, y un efecto que no nace de
+   * una interacción corre **después** de ese pintado. En ese cuadro la lista recuperaba la
+   * opacidad y `Enter` volvía a elegir sobre resultados viejos.
+   *
+   * Atando los dos datos en un solo estado, el invariante deja de depender del orden en que
+   * corren los efectos y pasa a ser estructural: **no existe un render donde los ítems sean
+   * de A y `lista.consulta` diga B**, porque se escriben juntos. `buscando` desaparece: era
+   * una forma indirecta y con retraso de preguntar lo mismo.
+   */
+  const [lista, setLista] = useState<{ consulta: string; items: ProduccionResumen[] }>({
+    consulta: "",
+    items: [],
+  });
   const [activo, setActivo] = useState(0);
   const ultima = useRef(0);
   const campo = useRef<HTMLInputElement>(null);
@@ -50,27 +68,25 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   useEffect(() => {
     setActivo(0);
     if (consulta.length < MINIMO) {
-      setResultados([]);
-      setBuscando(false);
+      setLista({ consulta, items: [] });
       return;
     }
 
     const pedido = ++ultima.current;
-    setBuscando(true);
     buscarProducciones(consulta)
       .then((items) => {
         if (pedido !== ultima.current) return; // una respuesta vieja no pisa a la nueva
-        setResultados(items);
-        setBuscando(false);
+        setLista({ consulta, items });
       })
       .catch(() => {
         if (pedido !== ultima.current) return;
         // ⚠️ Un fallo de la búsqueda **no rompe el gesto y no muestra una pantalla de
         // error**: la opción de sugerir sigue estando, que es la salida que importa.
-        setResultados([]);
-        setBuscando(false);
+        setLista({ consulta, items: [] });
       });
   }, [consulta]);
+
+  const resultados = lista.items;
 
   if (obra) {
     return (
@@ -101,16 +117,13 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
   const indiceDeSugerir = resultados.length;
 
   /**
-   * ⚠️ **La lista no es la del texto que está escrito ahora.** Son **dos** ventanas y no una,
-   * y la primera es la que importa porque ahí el dedo se está moviendo:
-   *
-   * 1. **La espera de los 250 ms**: `texto` ya cambió y `consulta` todavía no salió.
-   * 2. **El pedido en vuelo**: `consulta` salió y la respuesta no llegó (`buscando`).
-   *
-   * Mirar sólo la segunda —que es lo que hacía la primera versión— deja sin marcar justo el
-   * momento en que alguien tipea rápido y aprieta `Enter`.
+   * ⚠️ **"Lo que está en la lista no es lo que dice el campo".** Una sola comparación, contra
+   * **la consulta de la que salieron los ítems**, y por eso cubre las **tres** ventanas sin
+   * enumerarlas: la espera de los 250 ms, el pedido en vuelo, y el cuadro que hay entre las
+   * dos —el que se pinta después de que el temporizador movió `consulta` y antes de que el
+   * efecto arranque el pedido—. Comparar contra `consulta` dejaba abierta esa tercera.
    */
-  const desactualizada = texto.trim() !== consulta || buscando;
+  const desactualizada = texto.trim() !== lista.consulta;
 
   function elegirActivo() {
     // ⚠️ **`Enter` con la lista desactualizada no elige: adelanta la búsqueda.** Es el único
