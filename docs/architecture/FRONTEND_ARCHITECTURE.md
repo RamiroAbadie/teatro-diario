@@ -1,6 +1,18 @@
 # Frontend Architecture
 
-> Estado: v1.6 — la segunda mitad del paso 3 de la Fase 4 (los afiches) confirma **sin cambios**
+> Estado: v1.7 — el paso 4 de la Fase 4 (las cuatro pantallas con formulario) agrega **las tres
+> piezas de `lib/api/` que faltaban** —`catalogo.cliente.ts`, `diario.cliente.ts` y el
+> `buscarUsuarios` de Identidad—, dos carpetas de dominio nuevas (`components/busqueda/`,
+> `components/identidad/`) y dos piezas compartidas en `ui/`: **`Campo`/`CampoLargo`** y
+> **`usarBorrador.ts`**, que están ahí por la regla de pertenencia y **no convierten en once los
+> diez componentes de `DESIGN_SYSTEM.md`** (D90, mismo criterio que `usarDialogo.ts`).
+> **Las cinco reglas no cambian.** Lo que sí se agrega, en la sección de errores, es la única
+> excepción escrita al manejador global del `401`: **el login**, donde `401` significa
+> "esos datos no son" y no "tu sesión venció".
+> Y una regla nueva de formularios, que salió de probar la pantalla en un navegador: **todo
+> formulario lleva `method`**, porque sin hidratar el navegador lo envía nativamente.
+>
+> La v1.6 — la segunda mitad del paso 3 de la Fase 4 (los afiches) confirma **sin cambios**
 > lo que este documento ya decía: en desarrollo los escribe Spring en `frontend/public/afiches/`
 > —el directorio es configurable, y así quedó— y los sirve Next como estático, sin rewrite. Lo
 > único que cambia es la extensión: **`.jpg` y no `.webp`** (D88). El directorio va al
@@ -83,6 +95,8 @@ frontend/
   components/
     ui/                         los 10 de DESIGN_SYSTEM.md (D79): tarjeta, fila, afiche,
                                 puntaje, chip, usuario, botón, estado vacío, aviso, confirmación
+                                + la plomería compartida, que NO cuenta en esos diez (D82/D90):
+                                usarDialogo.ts, usarBorrador.ts, Campo.tsx
     layout/                     el armazón, y sólo lo usa (sitio)/layout.tsx (D81):
                                 Cabecera.tsx, MenuPrincipal.tsx, BloqueInferior.tsx,
                                 BarraDestinos.tsx
@@ -514,6 +528,7 @@ columnas:
 | `400` sin `errores` | el respaldo, en cualquier formulario — **ya no es el caso normal del panel admin** (D87) | mensaje general del formulario |
 | `401` | **`GET /api/auth/yo` usado para saber si hay sesión, o como semilla del token CSRF** | **no se muestra y no navega a ningún lado**: `401` acá significa "anónimo", que es el estado normal de la mayoría de las visitas. Se dibuja la versión sin sesión de la pantalla |
 | `401` | **acción o pantalla protegida** (mutación, panel admin, feed, cualquier cosa que necesite un yo) | redirige a login y **vuelve a donde estaba, con lo tipeado** (USER_FLOWS). Tampoco es "un error del servidor": es sesión ausente o vencida |
+| `401` | **el `POST` del login** (D90) | **no navega y no es la sesión**: es "esos datos no son". Se muestra el `detail` genérico —sin decir cuál de los dos campos falló (HU-02)— y el formulario se queda como está. Es la **única** llamada que se sale del manejador global |
 | `403` | de CSRF | releer el token y **reintentar una vez**, en silencio |
 | `403` | de permisos | pantalla de "no podés" — o el `403` de dueño al editar un registro ajeno, que no debería poder pasar |
 | `404` | ruta pública (ficha, perfil, artista) | página propia con búsqueda embebida |
@@ -554,6 +569,14 @@ hacerlo:
   sin afiche, que es el caso normal y no un error (D71).
 - **Validar formularios antes de mandar.** El `400` del backend es la red de contención, no la
   fuente del mensaje — sobre todo en el admin, donde no hay `errores` por campo.
+- **Ponerle `method` a todo `<form>`, aunque el envío lo haga JavaScript** (D90). Entre que el
+  HTML llega y el bundle hidrata hay una ventana —la del que entra por un link compartido con
+  datos móviles, o sea el Flujo 1— en la que el navegador **envía el formulario nativamente**, y
+  un `form` sin método hace un `GET`: en el login, **eso pone la contraseña en la URL**, en el
+  historial y en el `Referer`. Con `method="post"` no viaja en la URL. La excepción es el
+  buscador, donde el envío nativo **es el que se quiere**: con `action="/buscar"` y
+  `method="get"`, sin JavaScript el `Enter` navega a `/buscar?q=…` y la pantalla se sirve entera
+  desde el servidor.
 
 ## Qué NO hay
 

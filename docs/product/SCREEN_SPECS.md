@@ -1,6 +1,15 @@
 # Screen Specs
 
-> Estado: v1.3 — el paso 2 de la Fase 4 escribió **las pantallas 1, 3, 4, 5, 6 y 13** y este
+> Estado: v1.4 — el paso 4 de la Fase 4 escribió **las pantallas 7, 9, 10 y 11** y el CTA que le
+> faltaba a la 3. **Ninguna cambia de contenido ni de datos**; lo único que este documento
+> corrige es una medida: **la escala de puntaje de la pantalla 9 es un control segmentado y no
+> diez botones separados** (D90), porque en un celular de 360 quedan 328 px adentro de la hoja y
+> diez objetivos **con separación** no llegan a los 32 px de ancho que la entrada pedía. Con los
+> bordes compartidos dan 31,9 px; el alto de 44 no se toca.
+> Queda anotado, porque es de la 8 y de la 2 y no de la 9: **editar y borrar están escritos en
+> la hoja y todavía no tienen de dónde abrirse** — los menús de tres puntos son el paso 5.
+>
+> La v1.3 — el paso 2 de la Fase 4 escribió **las pantallas 1, 3, 4, 5, 6 y 13** y este
 > documento se corrige en dos puntos contra lo que se vio al dibujarlas: **la celda de la grilla
 > no repite el título** (D86, ver la pantalla 6) y **la placa de `og:image` ya tiene con qué
 > generarse** (D85, punto 2 de "lo que este documento deja anotado", ahora cerrado). Ninguna

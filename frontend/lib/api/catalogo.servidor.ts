@@ -5,8 +5,8 @@ import type { Artista, EnCartel, Ficha, SalaPublica } from "./tipos";
  * `lib/api/` espeja los módulos del backend (D78). Este es Catálogo, **lado servidor**: las
  * cuatro lecturas públicas que sostienen el SSR de ADR-003.
  *
- * No hay `catalogo.cliente.ts` todavía: la búsqueda y el autocompletado son del navegador y
- * entran con la pantalla 7 y el gesto (paso 4 de la Fase 4).
+ * La otra mitad —la búsqueda, el autocompletado del gesto y el `POST` de la sugerencia— es del
+ * navegador y vive en `catalogo.cliente.ts` (D82).
  *
  * ⚠️ **Lo que decide la caché es la llamada, no el endpoint** (D78). Tres de estas cuatro
  * son iguales para todo el mundo y van siempre por `apiPublic`; **la ficha es la excepción**
