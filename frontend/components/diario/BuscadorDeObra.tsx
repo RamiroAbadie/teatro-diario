@@ -141,10 +141,11 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
 
   /**
    * ⚠️ **"Lo que está en la lista no es lo que dice el campo".** Una sola comparación, contra
-   * **la consulta de la que salieron los ítems**, y por eso cubre las **tres** ventanas sin
-   * enumerarlas: la espera de los 250 ms, el pedido en vuelo, y el cuadro que hay entre las
-   * dos —el que se pinta después de que el temporizador movió `consulta` y antes de que el
-   * efecto arranque el pedido—. Comparar contra `consulta` dejaba abierta esa tercera.
+   * **la consulta de la que salieron los ítems**, y por eso ya no hay ventanas que enumerar:
+   * la espera de los 250 ms, el pedido en vuelo y el render que quedaba entre los dos —el que
+   * el modelo anterior **permitía** después de que el temporizador movió `consulta` y antes de
+   * que el efecto arrancara el pedido, y que **no se llegó a observar** (D91)— son el mismo
+   * caso mirado tres veces. Comparar contra `consulta` dejaba abierto el tercero.
    */
   const desactualizada = texto.trim() !== lista.consulta;
 
@@ -214,8 +215,8 @@ export function BuscadorDeObra({ obra, error, onElegir, onLimpiar, onSugerir }: 
 
         {/* El estado *cargando* del autocompletado: **no bloquea lo tipeado**. Es un punto
             que late, sin animación de giro, para no chocar con `prefers-reduced-motion`.
-            Aparece con la lista desactualizada y no sólo con el pedido en vuelo: las dos
-            ventanas se ven igual desde afuera. */}
+            Aparece con la lista desactualizada y no sólo con el pedido en vuelo: desde
+            afuera, esperar la tecla siguiente y esperar la respuesta son lo mismo. */}
         {desactualizada && (
           <span
             aria-hidden
